@@ -10,7 +10,7 @@ const renderer = new THREE.WebGLRenderer({
 });
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(1080, 1920, false);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.15;
@@ -18,21 +18,23 @@ renderer.toneMappingExposure = 1.15;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
+const TARGET_ASPECT = 9 / 16;
+
 const camera = new THREE.PerspectiveCamera(
   35,
-  window.innerWidth / window.innerHeight,
+  TARGET_ASPECT,
   0.1,
   200
 );
 
-camera.position.set(0, 0.8, 8.5);
+camera.position.set(0, 0.8, 14.0);
 
 const clock = new THREE.Clock();
 
 
-// ----------------------------------------------------
+// ====================================================
 // STARS
-// ----------------------------------------------------
+// ====================================================
 
 const starGeometry = new THREE.BufferGeometry();
 
@@ -75,18 +77,13 @@ const stars = new THREE.Points(
 scene.add(stars);
 
 
-// ----------------------------------------------------
-// EARTH GROUP
-// ----------------------------------------------------
+// ====================================================
+// EARTH
+// ====================================================
 
 const earthSystem = new THREE.Group();
 
 scene.add(earthSystem);
-
-
-// ----------------------------------------------------
-// EARTH TEXTURES
-// ----------------------------------------------------
 
 const loader = new THREE.TextureLoader();
 
@@ -103,11 +100,6 @@ const earthNormal = loader.load(
 const earthSpecular = loader.load(
   "https://threejs.org/examples/textures/planets/earth_specular_2048.jpg"
 );
-
-
-// ----------------------------------------------------
-// EARTH
-// ----------------------------------------------------
 
 const earthGeometry = new THREE.SphereGeometry(
   2.25,
@@ -131,9 +123,9 @@ const earth = new THREE.Mesh(
 earthSystem.add(earth);
 
 
-// ----------------------------------------------------
+// ====================================================
 // ATMOSPHERE
-// ----------------------------------------------------
+// ====================================================
 
 const atmosphereGeometry = new THREE.SphereGeometry(
   2.31,
@@ -156,9 +148,9 @@ const atmosphere = new THREE.Mesh(
 earthSystem.add(atmosphere);
 
 
-// ----------------------------------------------------
-// LIGHTING
-// ----------------------------------------------------
+// ====================================================
+// LIGHT
+// ====================================================
 
 const sunLight = new THREE.DirectionalLight(
   0xffffff,
@@ -173,7 +165,6 @@ sunLight.position.set(
 
 scene.add(sunLight);
 
-
 const ambientLight = new THREE.AmbientLight(
   0x334466,
   0.22
@@ -182,9 +173,9 @@ const ambientLight = new THREE.AmbientLight(
 scene.add(ambientLight);
 
 
-// ----------------------------------------------------
+// ====================================================
 // SIMULATION
-// ----------------------------------------------------
+// ====================================================
 
 let simulationTime = 0;
 
@@ -195,9 +186,88 @@ let rotationSpeed = NORMAL_SPEED;
 let state = "NORMAL";
 
 
-// ----------------------------------------------------
+// ====================================================
+// SCENARIO EVENTS — SAFE LAYER
+// ====================================================
+
+const SCENARIO_EVENTS = [
+  {
+    id: "normal",
+    start: 0,
+    end: 6,
+    label: "NORMAL ROTATION"
+  },
+  {
+    id: "decelerating",
+    start: 6,
+    end: 12,
+    label: "ROTATION DECELERATING"
+  },
+  {
+    id: "stopped",
+    start: 12,
+    end: 20,
+    label: "EARTH STOPPED"
+  },
+  {
+    id: "consequences",
+    start: 20,
+    end: 30,
+    label: "EARTH'S CONSEQUENCES"
+  },
+  {
+    id: "extreme",
+    start: 30,
+    end: 40,
+    label: "EXTREME CONDITIONS"
+  },
+  {
+    id: "ending",
+    start: 40,
+    end: 45,
+    label: "ENDING"
+  }
+];
+
+let activeScenarioEvent = null;
+
+let consequenceIntensity = 0;
+let stopEventTriggered = false;
+let stopImpactTime = 0;
+
+
+function updateScenarioEvents() {
+
+  let currentEvent = null;
+
+  for (const event of SCENARIO_EVENTS) {
+
+    if (
+      simulationTime >= event.start &&
+      simulationTime < event.end
+    ) {
+      currentEvent = event;
+      break;
+    }
+  }
+
+  if (
+    currentEvent &&
+    currentEvent.id !== activeScenarioEvent
+  ) {
+
+    activeScenarioEvent =
+      currentEvent.id;
+
+    console.log(
+      `[WHAT IF LAB] EVENT: ${currentEvent.label}`
+    );
+  }
+}
+
+// ====================================================
 // UI
-// ----------------------------------------------------
+// ====================================================
 
 const rotationState =
   document.getElementById("rotationState");
@@ -209,16 +279,15 @@ const speedValue =
   document.getElementById("speedValue");
 
 
-// ----------------------------------------------------
-// FORMAT TIME
-// ----------------------------------------------------
+// ====================================================
+// TIME
+// ====================================================
 
 function formatTime(seconds) {
 
   const total = Math.floor(seconds);
 
   const minutes = Math.floor(total / 60);
-
   const secs = total % 60;
 
   return (
@@ -229,26 +298,13 @@ function formatTime(seconds) {
 }
 
 
-// ----------------------------------------------------
-// SIMULATION LOGIC
-// ----------------------------------------------------
+// ====================================================
+// SIMULATION
+// ====================================================
 
 function updateSimulation(dt) {
 
   simulationTime += dt;
-
-  /*
-    Timeline
-
-    0 - 6 sec
-    Normal rotation
-
-    6 - 12 sec
-    Earth rapidly slows
-
-    12 sec+
-    Earth stops
-  */
 
   if (simulationTime < 6) {
 
@@ -256,37 +312,112 @@ function updateSimulation(dt) {
 
     rotationSpeed = NORMAL_SPEED;
 
-  }
-
-  else if (simulationTime < 12) {
+  } else if (simulationTime < 10) {
 
     state = "DECELERATING";
 
     const progress =
-      (simulationTime - 6) / 6;
+      (simulationTime - 6) / 4;
 
     rotationSpeed =
-      NORMAL_SPEED *
-      (1 - progress);
+      NORMAL_SPEED * (1 - progress);
 
-  }
+  } else if (simulationTime < 12) {
 
-  else {
+    state = "CRITICAL";
+
+    const progress =
+      (simulationTime - 10) / 2;
+
+    rotationSpeed =
+      0.12 * (1 - progress);
+
+  } else {
 
     state = "STOPPED";
 
     rotationSpeed = 0;
 
+    if (!stopEventTriggered) {
+      stopEventTriggered = true;
+      stopImpactTime = simulationTime;
+    }
   }
-
 
   earth.rotation.y +=
     rotationSpeed * dt;
 
+  // ==================================================
+  // EARTH STOP IMPACT
+  // ==================================================
 
-  // UI
+  if (stopEventTriggered) {
 
-  rotationState.textContent = state;
+    const impactAge =
+      simulationTime - stopImpactTime;
+
+    if (impactAge < 1.2) {
+
+      const pulse =
+        Math.max(
+          0,
+          1 - impactAge / 1.2
+        );
+
+      // Atmosphere shock pulse
+      atmosphere.material.opacity =
+        0.12 + pulse * 0.30;
+
+      // Earth physical shock
+      const shockScale =
+        1 +
+        Math.sin(impactAge * Math.PI * 8) *
+        0.012 *
+        pulse;
+
+      earth.scale.setScalar(
+        shockScale
+      );
+
+      // Camera shake
+      camera.position.x =
+        Math.sin(impactAge * 55) *
+        0.05 *
+        pulse;
+
+      camera.position.y =
+        0.8 +
+        Math.cos(impactAge * 48) *
+        0.04 *
+        pulse;
+
+      // Bright impact flash
+      scene.background.setRGB(
+        0.015 + pulse * 0.055,
+        0.025 + pulse * 0.075,
+        0.045 + pulse * 0.12
+      );
+
+    } else {
+
+      atmosphere.material.opacity =
+        0.12;
+
+      earth.scale.setScalar(1);
+
+      camera.position.x = 0;
+      camera.position.y = 0.8;
+
+      scene.background.setRGB(
+        0.005,
+        0.008,
+        0.015
+      );
+    }
+  }
+
+  rotationState.textContent =
+    state;
 
   const percent =
     Math.max(
@@ -304,80 +435,170 @@ function updateSimulation(dt) {
 }
 
 
-// ----------------------------------------------------
+// ====================================================
+// CINEMATIC CONSEQUENCE EFFECT
+// ====================================================
+
+function updateConsequenceEffect(dt) {
+
+  let targetIntensity = 0;
+
+  if (simulationTime >= 20) {
+    targetIntensity = Math.min(
+      1,
+      (simulationTime - 20) / 10
+    );
+  }
+
+  consequenceIntensity +=
+    (targetIntensity - consequenceIntensity) *
+    Math.min(dt * 0.8, 1);
+
+  atmosphere.material.opacity =
+    0.12 + consequenceIntensity * 0.18;
+
+  atmosphere.material.color.setRGB(
+    0.29 - consequenceIntensity * 0.12,
+    0.66 - consequenceIntensity * 0.30,
+    1.00 - consequenceIntensity * 0.20
+  );
+
+  ambientLight.intensity =
+    0.22 - consequenceIntensity * 0.12;
+}
+
+// ====================================================
 // CAMERA
-// ----------------------------------------------------
+// ====================================================
 
 function updateCamera() {
 
-  let targetZ = 8.5;
-
+  let targetZ = 14.0;
   let targetY = 0.8;
 
-  /*
-    Slow cinematic push toward Earth.
-  */
+  // 0–6s : NORMAL
+  if (simulationTime < 6) {
 
-  if (simulationTime < 20) {
+    targetZ = 14.0;
+    targetY = 0.8;
+
+  // 6–12s : EARTH SLOWS DOWN
+  } else if (simulationTime < 12) {
 
     const p =
-      Math.min(simulationTime / 20, 1);
+      (simulationTime - 6) / 6;
 
     targetZ =
-      8.5 - p * 2.0;
+      14.0 - p * 0.7;
 
     targetY =
-      0.8 - p * 0.25;
+      0.8 - p * 0.15;
 
+  // 12–20s : EARTH STOPS
+  } else if (simulationTime < 20) {
+
+    const p =
+      (simulationTime - 12) / 8;
+
+    targetZ =
+      13.3 - p * 1.5;
+
+    targetY =
+      0.65 - p * 0.10;
+
+  // 20–30s : CONSEQUENCES
+  } else if (simulationTime < 30) {
+
+    const p =
+      (simulationTime - 20) / 10;
+
+    targetZ =
+      11.8 - p * 2.0;
+
+    targetY =
+      0.55 - p * 0.15;
+
+  // 30–40s : EXTREME
+  } else {
+
+    targetZ = 9.8;
+    targetY = 0.4;
   }
 
   camera.position.z +=
-    (targetZ - camera.position.z) * 0.008;
+    (targetZ - camera.position.z) * 0.012;
 
   camera.position.y +=
-    (targetY - camera.position.y) * 0.008;
+    (targetY - camera.position.y) * 0.012;
 
   camera.lookAt(0, 0, 0);
 }
 
 
-// ----------------------------------------------------
-// STAR MOVEMENT
-// ----------------------------------------------------
+// ====================================================
+// STARS
+// ====================================================
 
 function updateStars(dt) {
 
   stars.rotation.y += dt * 0.002;
-
   stars.rotation.x += dt * 0.0005;
 }
 
 
-// ----------------------------------------------------
-// RESIZE
-// ----------------------------------------------------
+// ====================================================
+// RESIZE — ALWAYS 9:16
+// ====================================================
 
 function resize() {
 
-  const width =
+  const screenWidth =
     window.innerWidth;
 
-  const height =
+  const screenHeight =
     window.innerHeight;
 
-  camera.aspect =
-    width / height;
+  let width;
+  let height;
+
+  if (screenWidth / screenHeight > TARGET_ASPECT) {
+
+    height = screenHeight;
+    width = height * TARGET_ASPECT;
+
+  } else {
+
+    width = screenWidth;
+    height = width / TARGET_ASPECT;
+  }
+
+  camera.aspect = TARGET_ASPECT;
 
   camera.updateProjectionMatrix();
 
   renderer.setSize(
     width,
-    height
+    height,
+    false
   );
 
-  renderer.setPixelRatio(
-    Math.min(window.devicePixelRatio, 2)
-  );
+  renderer.domElement.style.width =
+    width + "px";
+
+  renderer.domElement.style.height =
+    height + "px";
+
+  renderer.domElement.style.position =
+    "absolute";
+
+  renderer.domElement.style.left =
+    "50%";
+
+  renderer.domElement.style.top =
+    "50%";
+
+  renderer.domElement.style.transform =
+    "translate(-50%, -50%)";
 }
 
 window.addEventListener(
@@ -385,10 +606,12 @@ window.addEventListener(
   resize
 );
 
+resize();
 
-// ----------------------------------------------------
+
+// ====================================================
 // MAIN LOOP
-// ----------------------------------------------------
+// ====================================================
 
 function animate() {
 
@@ -401,9 +624,9 @@ function animate() {
     );
 
   updateSimulation(dt);
-
+  updateScenarioEvents();
+  updateConsequenceEffect(dt);
   updateCamera();
-
   updateStars(dt);
 
   renderer.render(
