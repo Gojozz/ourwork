@@ -1,0 +1,31 @@
+{
+  "id": "earth-stopped-spinning",
+  "title": "WHAT IF EARTH SUDDENLY STOPPED SPINNING?",
+  "duration": 45,
+  "classification": "SCIENCE-BASED",
+
+  "simulation": {
+    "normalSpeed": 0.65,
+
+    "timeline": [
+      {
+        "start": 0,
+        "end": 6,
+        "state": "NORMAL",
+        "speed": 1
+      },
+      {
+        "start": 6,
+        "end": 12,
+        "state": "DECELERATING",
+        "speed": 0
+      },
+      {
+        "start": 12,
+        "end": 45,
+        "state": "STOPPED",
+        "speed": 0
+      }
+    ]
+  }
+}

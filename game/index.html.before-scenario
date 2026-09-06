@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+
+  <title>WHAT IF LAB — Earth Stops Spinning</title>
+
+  <link rel="stylesheet" href="style.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+  <canvas id="scene"></canvas>
+
+  <div id="hud">
+
+    <div id="brand">
+      WHAT IF LAB
+    </div>
+
+    <div id="question">
+      WHAT IF EARTH<br>
+      <span>SUDDENLY STOPPED SPINNING?</span>
+    </div>
+
+    <div id="statusBox">
+      <div class="label">ROTATION</div>
+      <div id="rotationState">NORMAL</div>
+    </div>
+
+    <div id="timer">
+      T+ <span id="simTime">00:00</span>
+    </div>
+
+    <div id="bottom">
+      <div id="speedText">ROTATIONAL SPEED</div>
+      <div id="speedValue">100%</div>
+    </div>
+
+  </div>
+
+  <script type="module" src="game.js"></script>
+
+</body>
+</html>
