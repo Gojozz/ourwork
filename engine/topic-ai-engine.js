@@ -3,6 +3,7 @@ const TopicGenerator = require("./topic-generator");
 const TopicValidator = require("./topic-validator");
 const TopicEngine = require("./topic-engine");
 const UsedTopicStore = require("./used-topic-store");
+const ResearchPipeline = require("./research-pipeline");
 
 class TopicAIEngine {
   constructor(options = {}) {
@@ -22,6 +23,19 @@ class TopicAIEngine {
     this.usedStore = new UsedTopicStore(
       options.usedTopicsFile || "./lab/topics/used-topics.json"
     );
+
+    this.researchPipeline = new ResearchPipeline({
+      minClaims: options.minClaims || 1,
+      maxClaims: options.maxClaims || 20,
+      minConfidence:
+        options.minConfidence !== undefined
+          ? options.minConfidence
+          : 7,
+      minImportance:
+        options.minImportance !== undefined
+          ? options.minImportance
+          : 0
+    });
   }
 
   setProvider(provider) {
@@ -62,13 +76,28 @@ class TopicAIEngine {
 
     this.usedStore.add(selected);
 
+    let research = null;
+
+    if (options.researchOutput) {
+      research = this.researchPipeline.process(
+        selected,
+        options.researchOutput
+      );
+    }
+
     return {
       generated: topics,
       fresh: freshTopics,
       added: freshTopics.length,
       ranking,
-      selected
+      selected,
+      research
     };
+  }
+
+
+  research(topic, rawOutput) {
+    return this.researchPipeline.process(topic, rawOutput);
   }
 
   list() {
