@@ -1,0 +1,40 @@
+name: AI Runner Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check runner resources
+        run: |
+          echo "===== CPU ====="
+          nproc
+          lscpu | grep -E 'Model name|CPU\(s\)|Architecture' | head -10 || true
+
+          echo
+          echo "===== MEMORY ====="
+          free -h
+
+          echo
+          echo "===== DISK ====="
+          df -h
+
+          echo
+          echo "===== OS ====="
+          uname -a
+
+          echo
+          echo "===== NODE ====="
+          node --version
+
+          echo
+          echo "===== AVAILABLE TOOLS ====="
+          command -v curl || true
+          command -v git || true
+          command -v cmake || true
+          command -v ninja || true
+          command -v gcc || true
+          command -v clang || true
