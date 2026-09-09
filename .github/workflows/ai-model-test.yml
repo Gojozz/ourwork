@@ -34,14 +34,6 @@ jobs:
 
           /tmp/llama.cpp/build/bin/llama-server --version
 
-      - name: Download Qwen3 4B
-        run: |
-          mkdir -p /tmp/models
-
-          /tmp/llama.cpp/build/bin/llama-server \
-            -hf Qwen/Qwen3-4B-GGUF:Q4_K_M \
-            --download-model
-
       - name: Start llama server
         run: |
           /tmp/llama.cpp/build/bin/llama-server \
