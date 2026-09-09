@@ -1,0 +1,120 @@
+name: AI Model Benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show runner
+        run: |
+          echo "===== RUNNER ====="
+          nproc
+          free -h
+          df -h /
+          uname -a
+          node --version
+
+      - name: Download llama.cpp
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp.git /tmp/llama.cpp
+
+          cmake -S /tmp/llama.cpp -B /tmp/llama.cpp/build \
+            -DCMAKE_BUILD_TYPE=Release
+
+          cmake --build /tmp/llama.cpp/build \
+            --config Release \
+            -j2 \
+            --target llama-server
+
+          /tmp/llama.cpp/build/bin/llama-server --version
+
+      - name: Download Qwen3 4B
+        run: |
+          mkdir -p /tmp/models
+
+          /tmp/llama.cpp/build/bin/llama-server \
+            -hf Qwen/Qwen3-4B-GGUF:Q4_K_M \
+            --download-model
+
+      - name: Start llama server
+        run: |
+          /tmp/llama.cpp/build/bin/llama-server \
+            -hf Qwen/Qwen3-4B-GGUF:Q4_K_M \
+            -c 8192 \
+            -t 4 \
+            -tb 4 \
+            --host 127.0.0.1 \
+            --port 8080 \
+            > /tmp/llama-server.log 2>&1 &
+
+          echo $! > /tmp/llama.pid
+
+          echo "Waiting for llama-server..."
+
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8080/v1/models > /tmp/models.json; then
+              echo "SERVER READY"
+              cat /tmp/models.json
+              break
+            fi
+
+            sleep 2
+          done
+
+          if ! curl -sf http://127.0.0.1:8080/v1/models > /tmp/models.json; then
+            echo "===== SERVER LOG ====="
+            cat /tmp/llama-server.log
+            exit 1
+          fi
+
+      - name: Run benchmark
+        run: |
+          echo "===== MODEL TEST ====="
+
+          START=$(date +%s)
+
+          RESPONSE=$(curl -sf \
+            --max-time 300 \
+            http://127.0.0.1:8080/v1/chat/completions \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "Qwen/Qwen3-4B-GGUF:Q4_K_M",
+              "messages": [
+                {
+                  "role": "system",
+                  "content": "You are the AI Strategist of WHAT IF LAB. Return JSON only."
+                },
+                {
+                  "role": "user",
+                  "content": "Generate exactly 3 scientific What If ideas for YouTube Shorts. Each must contain id, title, curiosity, visual, shortForm, novelty, educational. Scores must be numbers from 0 to 10. Return only a JSON object with a topics array."
+                }
+              ],
+              "temperature": 0.6,
+              "max_tokens": 700
+            }')
+
+          END=$(date +%s)
+          ELAPSED=$((END - START))
+
+          echo "===== RESPONSE ====="
+          echo "$RESPONSE"
+
+          echo
+          echo "===== TIME ====="
+          echo "${ELAPSED} seconds"
+
+      - name: Server diagnostics
+        if: always()
+        run: |
+          echo "===== LLAMA SERVER LOG ====="
+          cat /tmp/llama-server.log 2>/dev/null || true
+
+          echo
+          echo "===== MEMORY AFTER TEST ====="
+          free -h
