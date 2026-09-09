@@ -80,15 +80,21 @@ jobs:
               "messages": [
                 {
                   "role": "system",
-                  "content": "You are the AI Strategist of WHAT IF LAB. Return JSON only."
+                  "content": "You are the AI Strategist of WHAT IF LAB. Return only valid JSON. Do not explain. Do not use markdown."
                 },
                 {
                   "role": "user",
-                  "content": "Generate exactly 3 scientific What If ideas for YouTube Shorts. Each must contain id, title, curiosity, visual, shortForm, novelty, educational. Scores must be numbers from 0 to 10. Return only a JSON object with a topics array."
+                  "content": "Generate exactly 3 scientific What If ideas for YouTube Shorts. Each topic must contain id, title, curiosity, visual, shortForm, novelty, educational. curiosity, visual, and shortForm must be concise strings. novelty and educational must be numbers from 0 to 10. Return only a JSON object with a topics array containing exactly 3 objects."
                 }
               ],
-              "temperature": 0.6,
-              "max_tokens": 700
+              "chat_template_kwargs": {
+                "enable_thinking": false
+              },
+              "temperature": 0.2,
+              "max_tokens": 1200,
+              "response_format": {
+                "type": "json_object"
+              }
             }')
 
           END=$(date +%s)
@@ -100,6 +106,14 @@ jobs:
           echo
           echo "===== TIME ====="
           echo "${ELAPSED} seconds"
+
+          echo
+          echo "===== PARSE TEST ====="
+          printf '%s' "$RESPONSE" | jq -e '.choices[0].message.content | fromjson | .topics | length == 3' >/dev/null
+          echo "JSON: OK"
+
+          printf '%s' "$RESPONSE" | jq -r '.choices[0].finish_reason'
+          printf '%s' "$RESPONSE" | jq '.usage // {}'
 
       - name: Server diagnostics
         if: always()
