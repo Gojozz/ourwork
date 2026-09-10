@@ -59,7 +59,8 @@ ${usedText}
 OUTPUT RULES:
 - Return JSON only.
 - Return an object with a "topics" array.
-- Each topic must contain:
+- Generate exactly ${ideas} topics.
+- Each topic must contain EXACTLY these required fields:
   id
   title
   curiosity
@@ -67,11 +68,46 @@ OUTPUT RULES:
   shortForm
   novelty
   educational
-- curiosity, visual, shortForm, novelty, and educational MUST be numeric values from 0 to 10.
+
+ID RULES:
+- "id" MUST be a descriptive STRING.
+- Use lowercase kebab-case.
+- The id must describe the scenario.
+- Example: "electromagnetic-waves-disappear"
+- NEVER use a number as the id.
+- NEVER use numeric ids such as 1, 2, 3, 4, or 5.
+
+FIELD NAME RULES:
+- The field name MUST be exactly "novelty".
+- NEVER use "novelity", "novel", or any other spelling.
+
+SCORE RULES:
+- curiosity, visual, shortForm, novelty, and educational MUST be JSON NUMBERS from 0 to 10.
+- Do not put text, explanations, labels, or questions inside score fields.
+
+CONTENT RULES:
 - The topic must describe a specific hypothetical scientific scenario, not a generic question.
-- Prefer extreme, surprising, visual cause-and-effect scenarios.
-- Do not include markdown.
-- Do not include explanations outside JSON.
+- Prefer extreme, surprising, visually obvious cause-and-effect scenarios.
+- Prefer scenarios that can be explained and visualized within 30–60 seconds.
+- Avoid vague concepts that do not have clear physical consequences.
+
+CORRECT OUTPUT EXAMPLE:
+{
+  "topics": [
+    {
+      "id": "electromagnetic-waves-disappear",
+      "title": "What If All Electromagnetic Waves Suddenly Disappeared?",
+      "curiosity": 9,
+      "visual": 9,
+      "shortForm": 9,
+      "novelty": 10,
+      "educational": 8
+    }
+  ]
+}
+
+Do not include markdown.
+Do not include explanations outside JSON.
 `.trim();
   }
 }
