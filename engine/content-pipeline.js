@@ -6,6 +6,7 @@ const ScenarioPipeline = require("./scenario-pipeline");
 const NarrationGenerator = require("./narration-generator");
 const TTSAdapter = require("./tts-adapter");
 const AudioMuxRenderer = require("./audio-mux-renderer");
+const AIAdapter = require("./ai-adapter");
 
 class ContentPipeline {
   constructor(options = {}) {
@@ -51,6 +52,10 @@ class ContentPipeline {
       );
 
     this.provider = options.provider || null;
+
+    this.ai =
+      options.ai ||
+      new AIAdapter(options.provider || null);
   }
 
   setProvider(provider) {
@@ -59,6 +64,7 @@ class ContentPipeline {
     }
 
     this.provider = provider;
+    this.ai.setProvider(provider);
     this.topicAI.setProvider(provider);
 
     return this;
@@ -166,7 +172,7 @@ class ContentPipeline {
         this.buildResearchPrompt(selected);
 
       const rawResearch =
-        await this.provider(
+        await this.ai.generate(
           researchPrompt,
           {
             stage: "research",
@@ -198,7 +204,7 @@ class ContentPipeline {
         );
 
       const rawScenario =
-        await this.provider(
+        await this.ai.generate(
           scenarioPrompt,
           {
             stage: "scenario",
