@@ -4,8 +4,15 @@ class AIAdapter {
   }
 
   setProvider(provider) {
-    if (typeof provider !== "function") {
-      throw new Error("AI provider must be a function");
+    const valid =
+      typeof provider === "function" ||
+      (
+        provider &&
+        typeof provider.generate === "function"
+      );
+
+    if (!valid) {
+      throw new Error("Invalid AI provider");
     }
 
     this.provider = provider;
@@ -21,7 +28,10 @@ class AIAdapter {
       throw new Error("Prompt is required");
     }
 
-    const result = await this.provider(prompt, options);
+    const result =
+      typeof this.provider === "function"
+        ? await this.provider(prompt, options)
+        : await this.provider.generate(prompt, options);
 
     if (typeof result !== "string") {
       throw new Error("AI provider must return a string");
