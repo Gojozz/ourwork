@@ -1,5 +1,9 @@
 const ScenarioValidator = require("./validator");
-const EffectRegistry = require("./effect-registry");
+const EffectRegistry =
+  require("./effect-registry");
+
+const EffectCatalogLoader =
+  require("./effect-catalog-loader");
 
 class ScenarioAIValidator {
   constructor(options = {}) {
@@ -9,6 +13,12 @@ class ScenarioAIValidator {
 
     this.requireRegisteredEffects =
       options.requireRegisteredEffects !== false;
+
+    this.catalog =
+      options.catalog ||
+      EffectCatalogLoader.fromRegistry(
+        this.registry
+      );
   }
 
   validate(scenario) {
@@ -28,16 +38,38 @@ class ScenarioAIValidator {
       scenario &&
       Array.isArray(scenario.events)
     ) {
-      for (const event of scenario.events) {
-        if (
-          event &&
-          typeof event.effect === "string" &&
-          event.effect.trim() &&
-          !this.registry.has(event.effect)
-        ) {
-          errors.push(
-            `Event ${event.id || "unknown"}: Unregistered effect: ${event.effect}`
+      const effectNames =
+        scenario.events
+          .filter(
+            event =>
+              event &&
+              typeof event.effect === "string" &&
+              event.effect.trim()
+          )
+          .map(
+            event =>
+              event.effect.trim()
           );
+
+      const catalogResult =
+        this.catalog.validateEffects(
+          effectNames
+        );
+
+      if (!catalogResult.valid) {
+        for (const event of scenario.events) {
+          if (
+            event &&
+            typeof event.effect === "string" &&
+            event.effect.trim() &&
+            catalogResult.unknown.includes(
+              event.effect.trim()
+            )
+          ) {
+            errors.push(
+              `Event ${event.id || "unknown"}: Unregistered effect: ${event.effect}`
+            );
+          }
         }
       }
     }
