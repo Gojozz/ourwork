@@ -67,53 +67,173 @@ jobs:
 
       - name: Run benchmark
         run: |
-          echo "===== MODEL TEST ====="
+          echo "===== STRATEGIST BENCHMARK ====="
+
+          cat > /tmp/strategist-test.js <<'JS'
+          const Strategist = require(process.cwd() + "/engine/strategist");
+          const TopicGenerator = require(process.cwd() + "/engine/topic-generator");
+          const TopicValidator = require(process.cwd() + "/engine/topic-validator");
+          const TopicEngine = require(process.cwd() + "/engine/topic-engine");
+
+          async function main() {
+            const strategist = new Strategist({
+              defaultIdeas: 5
+            });
+
+            const prompt = strategist.buildPrompt({
+              ideas: 5,
+              usedTopics: [
+                {
+                  id: "earth-stops-rotating",
+                  title: "What If Earth Suddenly Stopped Rotating?"
+                },
+                {
+                  id: "moon-disappears",
+                  title: "What If the Moon Suddenly Disappeared?"
+                },
+                {
+                  id: "gravity-doubles",
+                  title: "What If Earth's Gravity Suddenly Doubled?"
+                }
+              ]
+            });
+
+            console.log("===== PROMPT =====");
+            console.log(prompt);
+
+            const response = await fetch(
+              "http://127.0.0.1:8080/v1/chat/completions",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  model: "Qwen/Qwen3-4B-GGUF:Q4_K_M",
+                  messages: [
+                    {
+                      role: "user",
+                      content: prompt
+                    }
+                  ],
+                  chat_template_kwargs: {
+                    enable_thinking: false
+                  },
+                  temperature: 0.2,
+                  max_tokens: 1200,
+                  response_format: {
+                    type: "json_object"
+                  }
+                })
+              }
+            );
+
+            if (!response.ok) {
+              throw new Error(
+                `HTTP ${response.status}: ${await response.text()}`
+              );
+            }
+
+            const data = await response.json();
+
+            const content =
+              data &&
+              data.choices &&
+              data.choices[0] &&
+              data.choices[0].message &&
+              data.choices[0].content;
+
+            if (typeof content !== "string") {
+              throw new Error("Missing model content");
+            }
+
+            console.log("===== RAW MODEL OUTPUT =====");
+            console.log(content);
+
+            const generator = new TopicGenerator({
+              minIdeas: 1,
+              maxIdeas: 10
+            });
+
+            const topics = generator.generate(content);
+
+            console.log("===== GENERATED TOPICS =====");
+            console.log(JSON.stringify(topics, null, 2));
+
+            const validator = new TopicValidator();
+            const validation = validator.validateMany(topics);
+
+            console.log("===== VALIDATION =====");
+            console.log(JSON.stringify(validation, null, 2));
+
+            if (!validation.valid) {
+              throw new Error(
+                "TOPIC VALIDATION FAILED: " +
+                validation.errors
+                  .map(e => `${e.id}: ${e.error}`)
+                  .join("; ")
+              );
+            }
+
+            const engine = new TopicEngine();
+
+            engine.addMany(topics);
+
+            const ranking = engine.rank();
+
+            console.log("===== RANKING =====");
+            console.log(JSON.stringify(ranking, null, 2));
+
+            const selected = engine.next();
+
+            if (!selected) {
+              throw new Error("No topic selected");
+            }
+
+            console.log("===== SELECTED =====");
+            console.log(JSON.stringify(selected, null, 2));
+
+            console.log("===== PIPELINE TEST =====");
+            console.log("STRATEGIST: OK");
+            console.log("GENERATOR: OK");
+            console.log("VALIDATOR: OK");
+            console.log("TOPIC ENGINE: OK");
+            console.log("SELECTED: OK");
+
+            console.log("===== MODEL METRICS =====");
+            console.log(JSON.stringify(data.timings || {}, null, 2));
+            console.log(JSON.stringify(data.usage || {}, null, 2));
+            console.log("FINISH_REASON:", data.choices[0].finish_reason);
+          }
+
+          main().catch(error => {
+            console.error(error);
+            process.exit(1);
+          });
+          JS
 
           START=$(date +%s)
 
-          RESPONSE=$(curl -sf \
-            --max-time 300 \
-            http://127.0.0.1:8080/v1/chat/completions \
-            -H "Content-Type: application/json" \
-            -d '{
-              "model": "Qwen/Qwen3-4B-GGUF:Q4_K_M",
-              "messages": [
-                {
-                  "role": "system",
-                  "content": "You are the AI Strategist of WHAT IF LAB. Return only valid JSON. Do not explain. Do not use markdown."
-                },
-                {
-                  "role": "user",
-                  "content": "Generate exactly 3 scientific What If ideas for YouTube Shorts. Each topic must contain id, title, curiosity, visual, shortForm, novelty, educational. curiosity, visual, and shortForm must be concise strings. novelty and educational must be numbers from 0 to 10. Return only a JSON object with a topics array containing exactly 3 objects."
-                }
-              ],
-              "chat_template_kwargs": {
-                "enable_thinking": false
-              },
-              "temperature": 0.2,
-              "max_tokens": 1200,
-              "response_format": {
-                "type": "json_object"
-              }
-            }')
+          node /tmp/strategist-test.js | tee /tmp/strategist-output.txt
 
           END=$(date +%s)
           ELAPSED=$((END - START))
-
-          echo "===== RESPONSE ====="
-          echo "$RESPONSE"
 
           echo
           echo "===== TIME ====="
           echo "${ELAPSED} seconds"
 
           echo
-          echo "===== PARSE TEST ====="
-          printf '%s' "$RESPONSE" | jq -e '.choices[0].message.content | fromjson | .topics | length == 3' >/dev/null
-          echo "JSON: OK"
+          echo "===== BENCHMARK RESULT ====="
 
-          printf '%s' "$RESPONSE" | jq -r '.choices[0].finish_reason'
-          printf '%s' "$RESPONSE" | jq '.usage // {}'
+          grep -q "STRATEGIST: OK" /tmp/strategist-output.txt
+          grep -q "GENERATOR: OK" /tmp/strategist-output.txt
+          grep -q "VALIDATOR: OK" /tmp/strategist-output.txt
+          grep -q "TOPIC ENGINE: OK" /tmp/strategist-output.txt
+          grep -q "SELECTED: OK" /tmp/strategist-output.txt
+
+          echo "STRATEGIST PIPELINE: OK"
+          echo "TIME: ${ELAPSED} seconds"
 
       - name: Server diagnostics
         if: always()
