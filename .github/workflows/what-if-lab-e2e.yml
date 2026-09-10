@@ -357,5 +357,6 @@ jobs:
           name: what-if-lab-diagnostics
           path: |
             /tmp/llama-server.log
+            /tmp/what-if-lab-topic-raw.txt
             output/github-e2e/
           retention-days: 3

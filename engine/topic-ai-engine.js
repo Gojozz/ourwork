@@ -106,6 +106,19 @@ ${JSON.stringify(previousResults)}
               }
             );
 
+          try {
+            require("fs").writeFileSync(
+              "/tmp/what-if-lab-topic-raw.txt",
+              String(rawOutput),
+              "utf8"
+            );
+          } catch (error) {
+            console.error(
+              "Failed to write topic raw diagnostic:",
+              error.message
+            );
+          }
+
           return this.generator.generate(
             rawOutput
           );
