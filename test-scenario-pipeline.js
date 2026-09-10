@@ -47,6 +47,12 @@ const rawOutput = JSON.stringify({
   title: "Earth Stops Rotating",
   version: 1,
   duration: 30,
+  initialState: {
+    entities: {},
+    variables: {
+      "earth.rotation": 1
+    }
+  },
   events: [
     {
       id: "normal",

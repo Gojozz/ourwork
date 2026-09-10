@@ -54,14 +54,36 @@ Each event must contain an "action" object with:
 - operation: how the property changes
 - value: the target value or operation value
 
-Allowed operation concepts include:
-set
-multiply
-add
-subtract
-remove
-enable
-disable
+STRICT OPERATION CONTRACT:
+
+The "operation" field MUST be exactly ONE of these seven strings:
+
+"set"
+"multiply"
+"add"
+"subtract"
+"remove"
+"enable"
+"disable"
+
+These are the ONLY supported simulation operations.
+
+NEVER output any other operation name.
+
+INVALID examples that MUST NOT be used:
+"update"
+"change"
+"modify"
+"rotate"
+"scale"
+"transform"
+"setValue"
+"increment"
+"decrement"
+
+If a requested change cannot be expressed using one of the seven
+supported operations above, choose the closest valid declarative
+operation or omit that action.
 
 The action describes the intended state change.
 The simulation engine decides how to implement it.
@@ -97,6 +119,10 @@ OUTPUT RULES:
   property
   operation
   value
+- operation MUST be exactly one of:
+  set, multiply, add, subtract, remove, enable, disable
+- Never invent operation names.
+- Never use implementation-specific commands.
 
 - Do not include an "effect" field unless explicitly required for legacy compatibility.
 - duration must be greater than zero.

@@ -19,6 +19,12 @@ const validScenario = {
   title: "Earth Stops Rotating",
   version: 1,
   duration: 30,
+  initialState: {
+    entities: {},
+    variables: {
+      "earth.rotation": 1
+    }
+  },
   events: [
     {
       id: "normal",
@@ -59,6 +65,12 @@ const invalidScenario = {
   title: "Invalid Scenario",
   version: 1,
   duration: 30,
+  initialState: {
+    entities: {},
+    variables: {
+      "earth.rotation": 1
+    }
+  },
   events: [
     {
       id: "normal",
@@ -108,12 +120,65 @@ const hasOverlap =
       error.toLowerCase().includes("overlaps previous event")
   );
 
+const unsupportedOperationScenario = {
+  id: "unsupported-operation",
+  title: "Unsupported Operation",
+  version: 1,
+  duration: 10,
+  initialState: {
+    entities: {},
+    variables: {
+      "earth.rotation": 1
+    }
+  },
+  events: [
+    {
+      id: "bad-operation",
+      start: 0,
+      end: 10,
+      action: {
+        domain: "earth",
+        property: "rotation",
+        operation: "update",
+        value: 0
+      }
+    }
+  ]
+};
+
+console.log("\n===== UNSUPPORTED OPERATION =====");
+
+const unsupportedOperationResult =
+  validator.validate(
+    unsupportedOperationScenario
+  );
+
+console.log(
+  "VALID:",
+  unsupportedOperationResult.valid
+);
+
+for (const error of unsupportedOperationResult.errors) {
+  console.log("ERROR:", error);
+}
+
+const hasUnsupportedOperation =
+  unsupportedOperationResult.errors.some(
+    error =>
+      typeof error === "string" &&
+      error.includes(
+        "Unsupported simulation operation: update"
+      )
+  );
+
 if (
   validResult.valid === true &&
   validResult.errors.length === 0 &&
   invalidResult.valid === false &&
   hasUnregisteredEffect &&
-  hasOverlap
+  hasOverlap &&
+  unsupportedOperationResult.valid === false &&
+  hasUnsupportedOperation
 ) {
   console.log("\nSCENARIO AI VALIDATOR: OK");
 } else {

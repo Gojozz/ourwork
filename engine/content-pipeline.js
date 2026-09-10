@@ -53,6 +53,9 @@ class ContentPipeline {
 
     this.provider = options.provider || null;
 
+    this.diagnostics =
+      options.diagnostics || {};
+
     this.ai =
       options.ai ||
       new AIAdapter(options.provider || null);
@@ -144,6 +147,110 @@ class ContentPipeline {
     );
   }
 
+  async generateScenario(
+    topic,
+    verifiedClaims,
+    scenarioPrompt,
+    options = {}
+  ) {
+    const maxRetries =
+      Number.isInteger(options.maxScenarioRetries)
+        ? Math.max(0, options.maxScenarioRetries)
+        : 2;
+
+    let prompt = scenarioPrompt;
+    let rawOutput = null;
+    let lastError = null;
+
+    for (
+      let attempt = 0;
+      attempt <= maxRetries;
+      attempt++
+    ) {
+      rawOutput =
+        await this.ai.generate(
+          prompt,
+          {
+            stage: "scenario",
+            topic,
+            verifiedClaims,
+            attempt
+          }
+        );
+
+      if (this.diagnostics.scenarioRawPath) {
+        const fs = require("fs");
+
+        fs.writeFileSync(
+          this.diagnostics.scenarioRawPath,
+          String(rawOutput)
+        );
+      }
+
+      try {
+        return this.processScenario(
+          topic,
+          verifiedClaims,
+          rawOutput
+        );
+      } catch (error) {
+        lastError = error;
+
+        if (attempt >= maxRetries) {
+          throw new Error(
+            `Scenario generation failed after ${attempt + 1} attempts: ${error.message}`
+          );
+        }
+
+        prompt = `
+You are repairing an invalid WHAT IF LAB simulation scenario.
+
+The previous AI output failed validation.
+
+VALIDATION ERROR:
+${error.message}
+
+ORIGINAL SCENARIO REQUEST:
+${scenarioPrompt}
+
+INVALID AI OUTPUT:
+${String(rawOutput)}
+
+REPAIR RULES:
+- Return JSON only.
+- Return exactly one scenario object.
+- Preserve the scientific meaning of the scenario.
+- Fix every validation error.
+- Do not invent fields, operations, handlers, JavaScript, or Three.js code.
+- Every event must use a declarative "action".
+- The "operation" field MUST be exactly one of:
+  "set"
+  "multiply"
+  "add"
+  "subtract"
+  "remove"
+  "enable"
+  "disable"
+- NEVER use "update", "change", "modify", "rotate",
+  "scale", "transform", "increment", "decrement",
+  or any other operation name.
+- Ensure initialState.entities and initialState.variables exist.
+- Ensure all events are chronological and non-overlapping.
+- Ensure every action contains:
+  domain
+  property
+  operation
+  value
+
+Return the COMPLETE corrected scenario JSON.
+`.trim();
+      }
+    }
+
+    throw lastError ||
+      new Error("Scenario generation failed");
+  }
+
   async run(options = {}) {
     if (!this.provider) {
       throw new Error("AI provider is not configured");
@@ -203,21 +310,21 @@ class ContentPipeline {
           research.verifiedClaims
         );
 
-      const rawScenario =
-        await this.ai.generate(
-          scenarioPrompt,
-          {
-            stage: "scenario",
-            topic: selected,
-            verifiedClaims: research.verifiedClaims
-          }
+      if (this.diagnostics.scenarioPromptPath) {
+        const fs = require("fs");
+
+        fs.writeFileSync(
+          this.diagnostics.scenarioPromptPath,
+          String(scenarioPrompt)
         );
+      }
 
       scenario =
-        this.processScenario(
+        await this.generateScenario(
           selected,
           research.verifiedClaims,
-          rawScenario
+          scenarioPrompt,
+          options
         );
     }
 

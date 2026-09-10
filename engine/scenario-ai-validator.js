@@ -7,6 +7,9 @@ const EffectRegistry =
 const EffectCatalogLoader =
   require("./effect-catalog-loader");
 
+const SimulationOperationEngine =
+  require("./simulation-operation-engine");
+
 class ScenarioAIValidator {
   constructor(options = {}) {
     this.registry =
@@ -21,6 +24,10 @@ class ScenarioAIValidator {
       EffectCatalogLoader.fromRegistry(
         this.registry
       );
+
+    this.operationEngine =
+      options.operationEngine ||
+      new SimulationOperationEngine();
   }
 
   validate(scenario) {
@@ -160,6 +167,14 @@ class ScenarioAIValidator {
         ) {
           errors.push(
             `Event ${event.id || i}: action operation is required`
+          );
+        } else if (
+          !this.operationEngine.has(
+            event.action.operation.trim()
+          )
+        ) {
+          errors.push(
+            `Event ${event.id || i}: Unsupported simulation operation: ${event.action.operation.trim()}`
           );
         }
 
