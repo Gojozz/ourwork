@@ -3,6 +3,9 @@ const TopicAIEngine = require("./topic-ai-engine");
 const ResearchEngine = require("./research-engine");
 const FactChecker = require("./fact-checker");
 const ScenarioPipeline = require("./scenario-pipeline");
+const NarrationGenerator = require("./narration-generator");
+const TTSAdapter = require("./tts-adapter");
+const AudioMuxRenderer = require("./audio-mux-renderer");
 
 class ContentPipeline {
   constructor(options = {}) {
@@ -28,6 +31,24 @@ class ContentPipeline {
     this.scenarioPipeline =
       options.scenarioPipeline ||
       new ScenarioPipeline(options.scenarioOptions);
+
+    this.narration =
+      options.narration ||
+      new NarrationGenerator(
+        options.narrationOptions
+      );
+
+    this.tts =
+      options.tts ||
+      new TTSAdapter(
+        options.ttsProvider || null
+      );
+
+    this.audioMux =
+      options.audioMux ||
+      new AudioMuxRenderer(
+        options.audioMuxOptions
+      );
 
     this.provider = options.provider || null;
   }
@@ -205,6 +226,60 @@ class ContentPipeline {
         this.scenarioPipeline.render(
           options.renderOptions || {}
         );
+    }
+
+    if (options.narrate) {
+      result.narration =
+        this.narration.generate(
+          selected,
+          research.verifiedClaims,
+          scenario.scenario
+        );
+    }
+
+    if (options.tts) {
+      if (!result.narration) {
+        result.narration =
+          this.narration.generate(
+            selected,
+            research.verifiedClaims,
+            scenario.scenario
+          );
+      }
+
+      result.audio =
+        await this.tts.synthesize(
+          result.narration.text,
+          options.ttsOptions || {}
+        );
+    }
+
+    if (options.muxAudio) {
+      if (!result.render) {
+        throw new Error(
+          "Render result is required for audio mux"
+        );
+      }
+
+      if (!result.audio) {
+        throw new Error(
+          "Audio result is required for audio mux"
+        );
+      }
+
+      result.final =
+        this.audioMux.render({
+          videoPath:
+            result.render.mp4.outputPath,
+
+          audioPath:
+            result.audio.audioPath ||
+            result.audio.outputPath,
+
+          outputPath:
+            options.muxOptions &&
+            options.muxOptions.outputPath
+        });
     }
 
     return result;

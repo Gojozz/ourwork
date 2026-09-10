@@ -1,0 +1,361 @@
+name: What If Lab E2E
+
+on:
+  workflow_dispatch:
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show runner
+        run: |
+          echo "===== RUNNER ====="
+          nproc
+          free -h
+          df -h /
+          node --version
+          python3 --version
+
+      - name: Install rendering tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ffmpeg \
+            chromium \
+            python3-venv
+
+          echo "===== TOOLS ====="
+          ffmpeg -version | head -1
+          chromium --version
+
+      - name: Install Piper
+        run: |
+          python3 -m venv /tmp/piper-venv
+          /tmp/piper-venv/bin/python -m pip install --upgrade pip
+          /tmp/piper-venv/bin/pip install piper-tts
+
+          mkdir -p /tmp/piper-voices
+
+          /tmp/piper-venv/bin/python \
+            -m piper.download_voices \
+            --data-dir /tmp/piper-voices \
+            en_US-lessac-medium
+
+          echo "===== PIPER ====="
+          /tmp/piper-venv/bin/python -m piper --help | head -20
+          ls -lh /tmp/piper-voices
+
+      - name: Build llama.cpp
+        run: |
+          git clone --depth 1 \
+            https://github.com/ggml-org/llama.cpp.git \
+            /tmp/llama.cpp
+
+          cmake \
+            -S /tmp/llama.cpp \
+            -B /tmp/llama.cpp/build \
+            -DCMAKE_BUILD_TYPE=Release
+
+          cmake \
+            --build /tmp/llama.cpp/build \
+            --config Release \
+            -j2 \
+            --target llama-server
+
+          /tmp/llama.cpp/build/bin/llama-server --version
+
+      - name: Start llama server
+        run: |
+          /tmp/llama.cpp/build/bin/llama-server \
+            -hf Qwen/Qwen3-4B-GGUF:Q4_K_M \
+            -c 8192 \
+            -t 4 \
+            -tb 4 \
+            --host 127.0.0.1 \
+            --port 8080 \
+            > /tmp/llama-server.log 2>&1 &
+
+          echo $! > /tmp/llama.pid
+
+          echo "Waiting for llama-server..."
+
+          for i in $(seq 1 90); do
+            if curl -sf \
+              http://127.0.0.1:8080/v1/models \
+              > /tmp/models.json; then
+
+              echo "===== LLAMA READY ====="
+              cat /tmp/models.json
+              break
+            fi
+
+            sleep 2
+          done
+
+          if ! curl -sf \
+            http://127.0.0.1:8080/v1/models \
+            > /tmp/models.json; then
+
+            echo "===== LLAMA LOG ====="
+            cat /tmp/llama-server.log
+            exit 1
+          fi
+
+      - name: Run What If Lab E2E
+        env:
+          LLAMA_BASE_URL: http://127.0.0.1:8080
+          LLAMA_MODEL: Qwen/Qwen3-4B-GGUF:Q4_K_M
+        run: |
+          cat > /tmp/what-if-lab-e2e.js <<'JS'
+          const fs = require("fs");
+
+          const ContentPipeline =
+            require(process.cwd() + "/engine/content-pipeline");
+
+          const LlamaProvider =
+            require(process.cwd() + "/providers/llama-provider");
+
+          const PiperTTSProvider =
+            require(process.cwd() + "/engine/piper-tts-provider");
+
+          const EffectRegistry =
+            require(process.cwd() + "/engine/effect-registry");
+
+          async function main() {
+            console.log("===== WHAT IF LAB E2E =====");
+
+            const outputDir =
+              "./output/github-e2e";
+
+            const videoPath =
+              "./output/github-e2e/video.mp4";
+
+            const audioPath =
+              "./output/github-e2e/narration.wav";
+
+            const finalPath =
+              "./output/github-e2e/final.mp4";
+
+            if (fs.existsSync(outputDir)) {
+              fs.rmSync(outputDir, {
+                recursive: true,
+                force: true
+              });
+            }
+
+            const registry =
+              new EffectRegistry();
+
+            const provider =
+              new LlamaProvider({
+                baseUrl:
+                  process.env.LLAMA_BASE_URL,
+                model:
+                  process.env.LLAMA_MODEL,
+                temperature: 0.2,
+                maxTokens: 1600
+              });
+
+            const tts =
+              new PiperTTSProvider({
+                command:
+                  "/tmp/piper-venv/bin/piper",
+                model:
+                  "en_US-lessac-medium",
+                dataDir:
+                  "/tmp/piper-voices"
+              });
+
+            const pipeline =
+              new ContentPipeline({
+                provider,
+
+                scenarioOptions: {
+                  validatorOptions: {
+                    registry
+                  },
+
+                  renderPipelineOptions: {
+                    backendOptions: {
+                      chromium:
+                        "chromium"
+                    }
+                  }
+                },
+
+                ttsProvider: tts
+              });
+
+            const result =
+              await pipeline.run({
+                count: 3,
+
+                render: true,
+
+                renderOptions: {
+                  fps: 10,
+                  outputDir,
+                  outputPath: videoPath
+                },
+
+                narrate: true,
+
+                tts: true,
+
+                ttsOptions: {
+                  outputPath: audioPath
+                },
+
+                muxAudio: true,
+
+                muxOptions: {
+                  outputPath: finalPath
+                }
+              });
+
+            console.log("");
+            console.log("===== RESULT =====");
+
+            console.log(
+              "TOPIC:",
+              result.topic.selected.id
+            );
+
+            console.log(
+              "TITLE:",
+              result.topic.selected.title
+            );
+
+            console.log(
+              "CLAIMS:",
+              result.research.totalClaims
+            );
+
+            console.log(
+              "VERIFIED:",
+              result.research.verifiedCount
+            );
+
+            console.log(
+              "SCENARIO:",
+              result.scenario.scenario.id
+            );
+
+            console.log(
+              "SCENARIO VALID:",
+              result.scenario.validation.valid
+            );
+
+            console.log(
+              "VIDEO:",
+              result.render.mp4.outputPath
+            );
+
+            console.log(
+              "AUDIO:",
+              result.audio.audioPath
+            );
+
+            console.log(
+              "FINAL:",
+              result.final.outputPath
+            );
+
+            console.log(
+              "NARRATION WORDS:",
+              result.narration.wordCount
+            );
+
+            if (
+              !result.topic.selected ||
+              !result.research ||
+              !result.scenario.validation.valid ||
+              !result.render ||
+              !result.render.mp4 ||
+              !result.audio ||
+              !result.final
+            ) {
+              throw new Error(
+                "WHAT IF LAB E2E FAILED"
+              );
+            }
+
+            for (const file of [
+              videoPath,
+              audioPath,
+              finalPath
+            ]) {
+              if (!fs.existsSync(file)) {
+                throw new Error(
+                  "Missing output: " + file
+                );
+              }
+
+              const size =
+                fs.statSync(file).size;
+
+              if (size <= 0) {
+                throw new Error(
+                  "Empty output: " + file
+                );
+              }
+
+              console.log(
+                "FILE OK:",
+                file,
+                size,
+                "bytes"
+              );
+            }
+
+            console.log("");
+            console.log(
+              "WHAT IF LAB E2E: OK"
+            );
+          }
+
+          main().catch(error => {
+            console.error("");
+            console.error(
+              "WHAT IF LAB E2E: FAILED"
+            );
+            console.error(error);
+            process.exit(1);
+          });
+          JS
+
+          time node /tmp/what-if-lab-e2e.js
+
+      - name: Inspect final MP4
+        run: |
+          echo "===== FINAL VIDEO ====="
+
+          ffprobe \
+            -v error \
+            -show_entries \
+            format=duration,size \
+            -show_entries \
+            stream=codec_type,codec_name,width,height,pix_fmt \
+            -of default=noprint_wrappers=1 \
+            output/github-e2e/final.mp4
+
+      - name: Upload final MP4
+        uses: actions/upload-artifact@v4
+        with:
+          name: what-if-lab-final-video
+          path: output/github-e2e/final.mp4
+          retention-days: 7
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: what-if-lab-diagnostics
+          path: |
+            /tmp/llama-server.log
+            output/github-e2e/
+          retention-days: 3
