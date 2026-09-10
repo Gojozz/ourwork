@@ -1,11 +1,20 @@
+const fs = require("fs");
+
 const TopicAIEngine = require("./engine/topic-ai-engine");
+
+const testFile = "./lab/topics/test-topic-ai-engine-used.json";
+
+if (fs.existsSync(testFile)) {
+  fs.unlinkSync(testFile);
+}
 
 async function main() {
   console.log("===== TOPIC AI ENGINE =====");
 
   const engine = new TopicAIEngine({
     minIdeas: 2,
-    maxIdeas: 10
+    maxIdeas: 10,
+    usedTopicsFile: testFile
   });
 
   engine.setProvider(async (prompt, options) => {
@@ -53,7 +62,7 @@ async function main() {
   );
 
   console.log();
-  console.log("GENERATED:", result.topics.length);
+  console.log("GENERATED:", result.generated.length);
   console.log("ADDED:", result.added);
 
   console.log();
@@ -74,9 +83,18 @@ async function main() {
 
   console.log();
   console.log("TOPIC AI ENGINE: OK");
+
+  if (fs.existsSync(testFile)) {
+    fs.unlinkSync(testFile);
+  }
 }
 
 main().catch(error => {
   console.error("TEST FAILED:", error.message);
+
+  if (fs.existsSync(testFile)) {
+    fs.unlinkSync(testFile);
+  }
+
   process.exit(1);
 });

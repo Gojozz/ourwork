@@ -1,4 +1,12 @@
+const fs = require("fs");
+
 const ContentPipeline = require("./engine/content-pipeline");
+
+const testFile = "./lab/topics/test-content-pipeline-used.json";
+
+if (fs.existsSync(testFile)) {
+  fs.unlinkSync(testFile);
+}
 
 const generatedTopics = {
   topics: [
@@ -173,8 +181,17 @@ const pipeline = new ContentPipeline({
   } else {
     throw new Error("CONTENT PIPELINE: FAILED");
   }
+
+  if (fs.existsSync(testFile)) {
+    fs.unlinkSync(testFile);
+  }
 })().catch(error => {
   console.error("\nCONTENT PIPELINE: FAILED");
   console.error(error.message);
+
+  if (fs.existsSync(testFile)) {
+    fs.unlinkSync(testFile);
+  }
+
   process.exit(1);
 });

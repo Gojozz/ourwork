@@ -1,6 +1,7 @@
 const AIAdapter = require("./ai-adapter");
 const TopicGenerator = require("./topic-generator");
 const TopicValidator = require("./topic-validator");
+const TopicQualityGate = require("./topic-quality-gate");
 const TopicEngine = require("./topic-engine");
 const UsedTopicStore = require("./used-topic-store");
 const ResearchPipeline = require("./research-pipeline");
@@ -15,6 +16,10 @@ class TopicAIEngine {
     });
 
     this.validator = new TopicValidator();
+
+    this.qualityGate = new TopicQualityGate(
+      options.qualityGateOptions
+    );
 
     this.engine = new TopicEngine({
       weights: options.weights
@@ -58,10 +63,23 @@ class TopicAIEngine {
       );
     }
 
-    const freshTopics = topics.filter(topic => !this.usedStore.has(topic));
+    const quality = this.qualityGate.filter(topics);
+
+    if (!quality.accepted.length) {
+      throw new Error(
+        "No generated topics passed the quality gate"
+      );
+    }
+
+    const freshTopics =
+      quality.accepted.filter(
+        topic => !this.usedStore.has(topic)
+      );
 
     if (!freshTopics.length) {
-      throw new Error("All generated topics have already been used");
+      throw new Error(
+        "All generated topics have already been used"
+      );
     }
 
     this.engine.addMany(freshTopics);
@@ -87,6 +105,7 @@ class TopicAIEngine {
 
     return {
       generated: topics,
+      quality,
       fresh: freshTopics,
       added: freshTopics.length,
       ranking,
