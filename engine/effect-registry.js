@@ -1,37 +1,65 @@
 const EffectHandler =
   require("./effect-handler");
 
+const EffectDefinition =
+  require("./effect-definition");
+
 class EffectRegistry {
   constructor() {
     this.effects = new Map();
   }
 
   register(name, metadata = {}) {
+    let definition;
+
     if (
-      typeof name !== "string" ||
-      !name.trim()
+      name instanceof EffectDefinition
+    ) {
+      definition = name;
+    } else {
+      if (
+        typeof name !== "string" ||
+        !name.trim()
+      ) {
+        throw new Error(
+          "Effect name is required"
+        );
+      }
+
+      const handler =
+        metadata.handler instanceof EffectHandler
+          ? metadata.handler
+          : null;
+
+      definition =
+        new EffectDefinition({
+          name,
+          domain:
+            metadata.domain ||
+            "unknown",
+          description:
+            metadata.description ||
+            "No description provided",
+          handler,
+          metadata:
+            metadata.metadata || {}
+        });
+    }
+
+    if (
+      this.effects.has(
+        definition.name
+      )
     ) {
       throw new Error(
-        "Effect name is required"
+        `Effect already registered: ${definition.name}`
       );
     }
 
-    if (this.effects.has(name)) {
-      throw new Error(
-        `Effect already registered: ${name}`
-      );
-    }
-
-    const handler =
-      metadata.handler instanceof EffectHandler
-        ? metadata.handler
-        : null;
-
-    this.effects.set(name, {
-      name,
-      ...metadata,
-      handler
-    });
+    this.effects.set(
+      definition.name,
+      definition
+    );
 
     return this;
   }
@@ -41,7 +69,10 @@ class EffectRegistry {
   }
 
   get(name) {
-    return this.effects.get(name) || null;
+    return (
+      this.effects.get(name) ||
+      null
+    );
   }
 
   execute(name, context = {}) {
@@ -54,26 +85,28 @@ class EffectRegistry {
       );
     }
 
-    if (
-      !effect.handler ||
-      typeof effect.handler.execute !== "function"
-    ) {
-      throw new Error(
-        `Effect handler is not configured: ${name}`
-      );
-    }
-
-    return effect.handler.execute(
+    return effect.execute(
       context
     );
   }
 
   list() {
-    return [...this.effects.values()];
+    return [
+      ...this.effects.values()
+    ];
   }
 
   names() {
-    return [...this.effects.keys()];
+    return [
+      ...this.effects.keys()
+    ];
+  }
+
+  definitions() {
+    return this.list().map(
+      effect =>
+        effect.toJSON()
+    );
   }
 }
 
