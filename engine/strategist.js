@@ -43,11 +43,15 @@ OBJECTIVES:
 - Avoid topics already used
 
 SCORING:
-curiosity: 0-10
-visual: 0-10
-shortForm: 0-10
-novelty: 0-10
-educational: 0-10
+curiosity: numeric score from 0 to 10
+visual: numeric score from 0 to 10
+shortForm: numeric score from 0 to 10
+novelty: numeric score from 0 to 10
+educational: numeric score from 0 to 10
+
+IMPORTANT:
+- All five scoring fields MUST be numbers, not strings.
+- Do not put explanations inside scoring fields.
 
 PREVIOUSLY USED TOPICS:
 ${usedText}
@@ -63,6 +67,9 @@ OUTPUT RULES:
   shortForm
   novelty
   educational
+- curiosity, visual, shortForm, novelty, and educational MUST be numeric values from 0 to 10.
+- The topic must describe a specific hypothetical scientific scenario, not a generic question.
+- Prefer extreme, surprising, visual cause-and-effect scenarios.
 - Do not include markdown.
 - Do not include explanations outside JSON.
 `.trim();
