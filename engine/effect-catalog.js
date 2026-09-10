@@ -72,6 +72,25 @@ class EffectCatalog {
     );
   }
 
+  validateEffects(effectNames = []) {
+    if (!Array.isArray(effectNames)) {
+      throw new Error(
+        "Effect names must be an array"
+      );
+    }
+
+    const unknown = effectNames.filter(
+      name =>
+        typeof name !== "string" ||
+        !this.has(name)
+    );
+
+    return {
+      valid: unknown.length === 0,
+      unknown
+    };
+  }
+
   toJSON() {
     return this.list().map(
       definition =>

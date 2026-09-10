@@ -85,6 +85,33 @@ if (
   );
 }
 
+const validResult =
+  catalog.validateEffects([
+    "physics.gravity.double",
+    "biology.human.starvation"
+  ]);
+
+if (!validResult.valid) {
+  throw new Error(
+    "VALID EFFECT CHECK FAILED"
+  );
+}
+
+const invalidResult =
+  catalog.validateEffects([
+    "physics.gravity.double",
+    "physics.this-effect-does-not-exist"
+  ]);
+
+if (
+  invalidResult.valid ||
+  invalidResult.unknown.length !== 1
+) {
+  throw new Error(
+    "INVALID EFFECT CHECK FAILED"
+  );
+}
+
 const json =
   catalog.toJSON();
 
@@ -119,6 +146,10 @@ console.log(
 
 console.log(
   "DOMAIN FILTER: OK"
+);
+
+console.log(
+  "EFFECT VALIDATION: OK"
 );
 
 console.log(
