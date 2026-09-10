@@ -141,7 +141,7 @@ jobs:
               data.choices &&
               data.choices[0] &&
               data.choices[0].message &&
-              data.choices[0].content;
+              data.choices[0].message.content;
 
             if (typeof content !== "string") {
               throw new Error("Missing model content");
