@@ -102,6 +102,65 @@ class SimulationLoop {
     );
   }
 
+  renderFrames(options = {}) {
+    const fps =
+      options.fps !== undefined
+        ? options.fps
+        : 30;
+
+    const duration =
+      options.duration !== undefined
+        ? options.duration
+        : 0;
+
+    if (
+      typeof fps !== "number" ||
+      !Number.isFinite(fps) ||
+      fps <= 0
+    ) {
+      throw new Error(
+        "FPS must be a positive finite number"
+      );
+    }
+
+    if (
+      typeof duration !== "number" ||
+      !Number.isFinite(duration) ||
+      duration < 0
+    ) {
+      throw new Error(
+        "Duration must be a non-negative finite number"
+      );
+    }
+
+    const frameCount =
+      Math.ceil(
+        duration * fps
+      );
+
+    const frames = [];
+
+    for (
+      let frame = 0;
+      frame < frameCount;
+      frame++
+    ) {
+      const time =
+        frame / fps;
+
+      const result =
+        this.update(time);
+
+      frames.push({
+        frame,
+        time,
+        result
+      });
+    }
+
+    return frames;
+  }
+
   reset() {
     if (this.state) {
       this.state.reset();
