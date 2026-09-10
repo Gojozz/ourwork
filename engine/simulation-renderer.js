@@ -1,10 +1,16 @@
 const EffectContext =
   require("./effect-context");
 
+const SimulationTimeline =
+  require("./simulation-timeline");
+
 class SimulationRenderer {
   constructor(options = {}) {
     this.registry =
       options.registry || null;
+
+    this.timeline =
+      options.timeline || null;
 
     this.currentEffect = null;
     this.currentEvent = null;
@@ -20,6 +26,60 @@ class SimulationRenderer {
     this.registry = registry;
 
     return this;
+  }
+
+  setTimeline(timeline) {
+    if (
+      !timeline ||
+      typeof timeline.getActiveEvent !==
+        "function"
+    ) {
+      throw new Error(
+        "Simulation timeline is required"
+      );
+    }
+
+    this.timeline = timeline;
+
+    return this;
+  }
+
+  updateAtTime(time, options = {}) {
+    if (
+      !this.timeline
+    ) {
+      throw new Error(
+        "Simulation timeline is not configured"
+      );
+    }
+
+    const active =
+      this.timeline.getActiveEvent(
+        time
+      );
+
+    if (!active) {
+      this.currentEffect = null;
+      this.currentEvent = null;
+
+      return null;
+    }
+
+    const result =
+      this.update(
+        active.event,
+        {
+          ...options,
+          progress:
+            active.progress
+        }
+      );
+
+    return {
+      ...result,
+      progress:
+        active.progress
+    };
   }
 
   resolveEffect(event) {
