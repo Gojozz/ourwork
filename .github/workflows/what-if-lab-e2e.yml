@@ -157,7 +157,7 @@ jobs:
                 model:
                   process.env.LLAMA_MODEL,
                 temperature: 0.2,
-                maxTokens: 1600
+                maxTokens: 2400
               });
 
             const tts =
@@ -193,6 +193,7 @@ jobs:
             const result =
               await pipeline.run({
                 count: 3,
+                ideas: 3,
 
                 render: true,
 
