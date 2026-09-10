@@ -70,6 +70,11 @@ class TopicAIEngine {
           options.minAcceptedTopics ||
           1,
 
+        usedTopicIds:
+          this.usedStore
+            .list()
+            .map(topic => topic.id),
+
         generate: async ({ attempt, previousResults }) => {
           const attemptPrompt =
             attempt === 1

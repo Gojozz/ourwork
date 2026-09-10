@@ -20,7 +20,21 @@ class TopicStrategyLoop {
       options.minAccepted || 1;
   }
 
-  evaluate(topics = []) {
+  evaluate(topics = [], options = {}) {
+    const usedTopicIds =
+      new Set(
+        Array.isArray(options.usedTopicIds)
+          ? options.usedTopicIds
+          : []
+      );
+
+    const acceptedTopicIds =
+      new Set(
+        Array.isArray(options.acceptedTopicIds)
+          ? options.acceptedTopicIds
+          : []
+      );
+
     const validation =
       this.validator.validateMany(topics);
 
@@ -45,9 +59,39 @@ class TopicStrategyLoop {
     const quality =
       this.qualityGate.filter(validTopics);
 
+    const duplicateRejected = [];
+    const accepted = [];
+
+    for (const topic of quality.accepted) {
+      const id = topic && topic.id;
+
+      if (
+        id &&
+        (
+          usedTopicIds.has(id) ||
+          acceptedTopicIds.has(id)
+        )
+      ) {
+        duplicateRejected.push({
+          topic,
+          stage: "deduplication",
+          score: topic.qualityScore,
+          errors: [
+            "Topic has already been used or accepted"
+          ]
+        });
+
+        continue;
+      }
+
+      accepted.push(topic);
+    }
+
     const acceptedIds =
       new Set(
-        quality.accepted.map(topic => topic.id)
+        accepted
+          .map(topic => topic.id)
+          .filter(Boolean)
       );
 
     const rejected =
@@ -61,12 +105,13 @@ class TopicStrategyLoop {
         ...quality.rejected.map(item => ({
           ...item,
           stage: "quality-gate"
-        }))
+        })),
+        ...duplicateRejected
       ];
 
     return {
       validation,
-      accepted: quality.accepted,
+      accepted,
       rejected,
       acceptedIds
     };
@@ -94,6 +139,16 @@ class TopicStrategyLoop {
     let allRejected = [];
     let allAccepted = [];
 
+    const usedTopicIds =
+      new Set(
+        Array.isArray(options.usedTopicIds)
+          ? options.usedTopicIds
+          : []
+      );
+
+    const acceptedTopicIds =
+      new Set();
+
     for (
       let attempt = 1;
       attempt <= maxAttempts;
@@ -112,7 +167,14 @@ class TopicStrategyLoop {
       }
 
       const evaluation =
-        this.evaluate(topics);
+        this.evaluate(topics, {
+          usedTopicIds: [
+            ...usedTopicIds
+          ],
+          acceptedTopicIds: [
+            ...acceptedTopicIds
+          ]
+        });
 
       const accepted =
         evaluation.accepted;
@@ -129,6 +191,12 @@ class TopicStrategyLoop {
 
       allAccepted =
         [...allAccepted, ...accepted];
+
+      for (const topic of accepted) {
+        if (topic && topic.id) {
+          acceptedTopicIds.add(topic.id);
+        }
+      }
 
       allRejected =
         [...allRejected, ...rejected];
