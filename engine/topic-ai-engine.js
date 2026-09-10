@@ -5,6 +5,7 @@ const TopicQualityGate = require("./topic-quality-gate");
 const TopicEngine = require("./topic-engine");
 const UsedTopicStore = require("./used-topic-store");
 const ResearchPipeline = require("./research-pipeline");
+const TopicStrategyLoop = require("./topic-strategy-loop");
 
 class TopicAIEngine {
   constructor(options = {}) {
@@ -20,6 +21,15 @@ class TopicAIEngine {
     this.qualityGate = new TopicQualityGate(
       options.qualityGateOptions
     );
+
+    this.strategyLoop = new TopicStrategyLoop({
+      validator: this.validator,
+      qualityGate: this.qualityGate,
+      maxAttempts:
+        options.maxTopicAttempts || 3,
+      minAccepted:
+        options.minAcceptedTopics || 1
+    });
 
     this.engine = new TopicEngine({
       weights: options.weights
@@ -49,47 +59,108 @@ class TopicAIEngine {
   }
 
   async generate(prompt, options = {}) {
-    const rawOutput = await this.adapter.generate(prompt, options);
+    const maxAttempts =
+      options.maxTopicAttempts ||
+      this.strategyLoop.maxAttempts;
 
-    const topics = this.generator.generate(rawOutput);
+    const strategy =
+      await this.strategyLoop.run({
+        maxAttempts,
+        minAccepted:
+          options.minAcceptedTopics ||
+          1,
 
-    const validation = this.validator.validateMany(topics);
+        generate: async ({ attempt, previousResults }) => {
+          const attemptPrompt =
+            attempt === 1
+              ? prompt
+              : `${prompt}
 
-    if (!validation.valid) {
+IMPORTANT RETRY:
+The previous topic generation attempt did not produce
+enough acceptable topics.
+
+Generate a fresh batch of topics.
+
+Avoid repeating topics from previous attempts.
+Avoid generic explanatory questions.
+Use specific hypothetical "What If" scenarios
+with clear changes and consequences.
+
+Previous attempt results:
+${JSON.stringify(previousResults)}
+`;
+
+          const rawOutput =
+            await this.adapter.generate(
+              attemptPrompt,
+              {
+                ...options,
+                attempt,
+                stage: "topic"
+              }
+            );
+
+          return this.generator.generate(
+            rawOutput
+          );
+        }
+      });
+
+    if (!strategy.success) {
+      const rejectionSummary =
+        strategy.rejected
+          .map(item => {
+            const id =
+              item.topic && item.topic.id
+                ? item.topic.id
+                : "unknown";
+
+            return `${id}: ${
+              item.errors.join(", ")
+            }`;
+          })
+          .join("; ");
+
       throw new Error(
-        `Invalid generated topics: ${validation.errors
-          .map(error => error.error)
-          .join("; ")}`
+        `No acceptable topics after ${strategy.attempts} attempts` +
+        (rejectionSummary
+          ? `: ${rejectionSummary}`
+          : "")
       );
     }
 
-    const quality = this.qualityGate.filter(topics);
-
-    if (!quality.accepted.length) {
-      throw new Error(
-        "No generated topics passed the quality gate"
+    const generated =
+      strategy.history.flatMap(
+        attempt => attempt.generated
       );
-    }
+
+    const accepted =
+      strategy.accepted;
 
     const freshTopics =
-      quality.accepted.filter(
+      accepted.filter(
         topic => !this.usedStore.has(topic)
       );
 
     if (!freshTopics.length) {
       throw new Error(
-        "All generated topics have already been used"
+        "All accepted topics have already been used"
       );
     }
 
     this.engine.addMany(freshTopics);
 
-    const ranking = this.engine.rank();
+    const ranking =
+      this.engine.rank();
 
-    const selected = this.engine.next();
+    const selected =
+      this.engine.next();
 
     if (!selected) {
-      throw new Error("No topic available after deduplication");
+      throw new Error(
+        "No topic available after deduplication"
+      );
     }
 
     this.usedStore.add(selected);
@@ -97,23 +168,32 @@ class TopicAIEngine {
     let research = null;
 
     if (options.researchOutput) {
-      research = this.researchPipeline.process(
-        selected,
-        options.researchOutput
-      );
+      research =
+        this.researchPipeline.process(
+          selected,
+          options.researchOutput
+        );
     }
 
     return {
-      generated: topics,
-      quality,
+      generated,
+      quality: {
+        accepted,
+        rejected:
+          strategy.rejected
+      },
       fresh: freshTopics,
       added: freshTopics.length,
       ranking,
       selected,
-      research
+      research,
+      strategy: {
+        success: strategy.success,
+        attempts: strategy.attempts,
+        history: strategy.history
+      }
     };
   }
-
 
   research(topic, rawOutput) {
     return this.researchPipeline.process(topic, rawOutput);
