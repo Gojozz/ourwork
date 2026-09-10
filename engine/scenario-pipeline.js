@@ -1,6 +1,8 @@
 const ScenarioGenerator = require("./scenario-generator");
 const ScenarioAIValidator = require("./scenario-ai-validator");
 const ScenarioEngine = require("./scenario");
+const SimulationRenderer =
+  require("./simulation-renderer");
 
 class ScenarioPipeline {
   constructor(options = {}) {
@@ -13,6 +15,12 @@ class ScenarioPipeline {
       new ScenarioAIValidator(options.validatorOptions);
 
     this.engine = null;
+
+    this.renderer =
+      options.renderer ||
+      new SimulationRenderer(
+        options.rendererOptions
+      );
   }
 
   process(topic, verifiedClaims, rawOutput) {
@@ -73,10 +81,29 @@ class ScenarioPipeline {
     return this.engine.getDuration();
   }
 
+  getRenderer() {
+    return this.renderer;
+  }
+
+  renderEvent(event, options = {}) {
+    if (!this.engine) {
+      throw new Error(
+        "Scenario engine is not configured"
+      );
+    }
+
+    return this.renderer.update(
+      event,
+      options
+    );
+  }
+
   reset() {
     if (this.engine) {
       this.engine.reset();
     }
+
+    this.renderer.reset();
   }
 }
 
