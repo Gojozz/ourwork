@@ -4,6 +4,9 @@ const ScenarioEngine = require("./scenario");
 const SimulationRenderer =
   require("./simulation-renderer");
 
+const SimulationRenderPipeline =
+  require("./simulation-render-pipeline");
+
 class ScenarioPipeline {
   constructor(options = {}) {
     this.generator =
@@ -20,6 +23,12 @@ class ScenarioPipeline {
       options.renderer ||
       new SimulationRenderer(
         options.rendererOptions
+      );
+
+    this.renderPipeline =
+      options.renderPipeline ||
+      new SimulationRenderPipeline(
+        options.renderPipelineOptions
       );
   }
 
@@ -85,6 +94,29 @@ class ScenarioPipeline {
     return this.renderer;
   }
 
+  getRenderPipeline() {
+    return this.renderPipeline;
+  }
+
+  render(options = {}) {
+    if (!this.engine) {
+      throw new Error(
+        "Scenario engine is not configured"
+      );
+    }
+
+    const scenario =
+      this.engine.getScenario();
+
+    this.renderPipeline.configure(
+      scenario
+    );
+
+    return this.renderPipeline.render(
+      options
+    );
+  }
+
   renderEvent(event, options = {}) {
     if (!this.engine) {
       throw new Error(
@@ -104,6 +136,7 @@ class ScenarioPipeline {
     }
 
     this.renderer.reset();
+    this.renderPipeline.reset();
   }
 }
 

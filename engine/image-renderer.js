@@ -83,7 +83,12 @@ class ImageRenderer {
           frame.frame,
         time:
           frame.time,
-        image
+        image,
+        data:
+          image &&
+          typeof image === "object"
+            ? image.data || image
+            : image
       });
     }
 

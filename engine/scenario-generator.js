@@ -40,17 +40,31 @@ OBJECTIVES:
 - Suitable for a 30–60 second YouTube Shorts simulation.
 - Events must have explicit start and end times.
 - Events must not overlap.
-- Use only registered effect names.
+- Describe WHAT changes in the simulation, not HOW it is implemented.
+- Use declarative actions only.
+- Do not choose JavaScript handlers.
 - Do not invent JavaScript.
 - Do not generate Three.js code.
 - Do not include unsupported scientific claims.
 
-REGISTERED EFFECT EXAMPLES:
-earth.normal
-earth.decelerate
-earth.stop
-earth.consequences
-camera.shake
+DECLARATIVE ACTION:
+Each event must contain an "action" object with:
+- domain: the scientific or simulation domain
+- property: the state property that changes
+- operation: how the property changes
+- value: the target value or operation value
+
+Allowed operation concepts include:
+set
+multiply
+add
+subtract
+remove
+enable
+disable
+
+The action describes the intended state change.
+The simulation engine decides how to implement it.
 
 OUTPUT RULES:
 - Return JSON only.
@@ -60,12 +74,31 @@ OUTPUT RULES:
   title
   version
   duration
+  initialState
   events
+
+- initialState must contain:
+  entities
+  variables
+
+- entities and variables must be plain JSON objects.
+- Entities describe what exists in the simulation.
+- Entity appearance must use declarative properties only.
+- Do not include JavaScript, Three.js, functions, or executable code.
+
 - Each event must contain:
   id
   start
   end
-  effect
+  action
+
+- Each action must contain:
+  domain
+  property
+  operation
+  value
+
+- Do not include an "effect" field unless explicitly required for legacy compatibility.
 - duration must be greater than zero.
 - Event start must be >= 0.
 - Event end must be greater than start.

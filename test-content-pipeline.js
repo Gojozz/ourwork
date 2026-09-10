@@ -61,31 +61,59 @@ const scenarioOutput = {
   id: "earth-loses-magnetic-field",
   title: "What If Earth's Magnetic Field Suddenly Disappeared?",
   version: 1,
-  duration: 30,
+  duration: 2,
+
+  initialState: {
+    entities: {
+      earth: {
+        x: 540,
+        y: 700,
+        radius: 260,
+        appearance: {
+          shape: "circle",
+          color: "#4da6ff"
+        }
+      },
+      solarWind: {
+        x: 540,
+        y: 1100,
+        appearance: {
+          shape: "line",
+          length: 500,
+          color: "#ffffff",
+          strokeWidth: 10,
+          opacity: 0.7
+        }
+      }
+    },
+
+    variables: {
+      "physics.gravity": 9.8
+    }
+  },
+
   events: [
     {
-      id: "normal",
-      start: 0,
-      end: 6,
-      effect: "earth.normal"
-    },
-    {
       id: "field-lost",
-      start: 6,
-      end: 12,
-      effect: "earth.magnetic-field-off"
+      start: 0,
+      end: 1,
+      action: {
+        domain: "physics",
+        property: "gravity",
+        operation: "multiply",
+        value: 2
+      }
     },
     {
-      id: "solar-wind",
-      start: 12,
-      end: 20,
-      effect: "earth.solar-wind"
-    },
-    {
-      id: "consequences",
-      start: 20,
-      end: 30,
-      effect: "earth.consequences"
+      id: "gravity-reset",
+      start: 1,
+      end: 2,
+      action: {
+        domain: "physics",
+        property: "gravity",
+        operation: "set",
+        value: 9.8
+      }
     }
   ]
 };
@@ -142,8 +170,27 @@ const pipeline = new ContentPipeline({
 (async () => {
   console.log("===== CONTENT PIPELINE TEST =====");
 
+  const outputDir =
+    "./output/test/content-pipeline-e2e";
+
+  const outputPath =
+    "./output/test/content-pipeline-e2e/content-pipeline.mp4";
+
+  if (fs.existsSync(outputDir)) {
+    fs.rmSync(outputDir, {
+      recursive: true,
+      force: true
+    });
+  }
+
   const result = await pipeline.run({
-    count: 2
+    count: 2,
+    render: true,
+    renderOptions: {
+      fps: 10,
+      outputDir,
+      outputPath
+    }
   });
 
   console.log("\n===== TOPIC =====");
@@ -162,6 +209,20 @@ const pipeline = new ContentPipeline({
   console.log("EVENTS:", result.scenario.scenario.events.length);
   console.log("VALID:", result.scenario.validation.valid);
 
+  console.log("\n===== RENDER =====");
+  console.log(
+    "FRAMES:",
+    result.render.frames.length
+  );
+  console.log(
+    "MP4:",
+    result.render.mp4.outputPath
+  );
+  console.log(
+    "MP4 SIZE:",
+    result.render.mp4.size
+  );
+
   console.log("\n===== AI CALLS =====");
   console.log("COUNT:", calls.length);
   console.log(
@@ -174,7 +235,12 @@ const pipeline = new ContentPipeline({
     result.research.verifiedCount === 2 &&
     result.research.rejectedCount === 1 &&
     result.scenario.validation.valid === true &&
-    result.scenario.scenario.events.length === 4 &&
+    result.scenario.scenario.events.length === 2 &&
+    result.scenario.scenario.initialState &&
+    result.render &&
+    result.render.frames.length === 20 &&
+    result.render.mp4 &&
+    result.render.mp4.size > 0 &&
     calls.length === 3
   ) {
     console.log("\nCONTENT PIPELINE: OK");

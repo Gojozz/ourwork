@@ -194,11 +194,20 @@ class ContentPipeline {
         );
     }
 
-    return {
+    const result = {
       topic: topicResult,
       research,
       scenario
     };
+
+    if (options.render) {
+      result.render =
+        this.scenarioPipeline.render(
+          options.renderOptions || {}
+        );
+    }
+
+    return result;
   }
 }
 

@@ -28,6 +28,52 @@ class ScenarioValidator {
     }
 
 
+    if (
+      scenario.initialState !== undefined &&
+      (
+        !scenario.initialState ||
+        typeof scenario.initialState !== "object" ||
+        Array.isArray(scenario.initialState)
+      )
+    ) {
+      errors.push(
+        "Initial state must be an object"
+      );
+    }
+
+    if (
+      scenario.initialState !== undefined &&
+      scenario.initialState &&
+      typeof scenario.initialState === "object" &&
+      !Array.isArray(scenario.initialState)
+    ) {
+      if (
+        scenario.initialState.entities !== undefined &&
+        (
+          !scenario.initialState.entities ||
+          typeof scenario.initialState.entities !== "object" ||
+          Array.isArray(scenario.initialState.entities)
+        )
+      ) {
+        errors.push(
+          "Initial state entities must be an object"
+        );
+      }
+
+      if (
+        scenario.initialState.variables !== undefined &&
+        (
+          !scenario.initialState.variables ||
+          typeof scenario.initialState.variables !== "object" ||
+          Array.isArray(scenario.initialState.variables)
+        )
+      ) {
+        errors.push(
+          "Initial state variables must be an object"
+        );
+      }
+    }
+
     if (!Array.isArray(scenario.events)) {
       errors.push("Events must be an array");
 
@@ -109,13 +155,54 @@ class ScenarioValidator {
       }
 
 
-      if (
-        typeof event.effect !== "string" ||
-        !event.effect.trim()
-      ) {
+      const hasAction =
+        event.action &&
+        typeof event.action === "object" &&
+        !Array.isArray(event.action);
+
+      const hasLegacyEffect =
+        typeof event.effect === "string" &&
+        event.effect.trim();
+
+      if (!hasAction && !hasLegacyEffect) {
         errors.push(
-          `Event ${i}: effect is required`
+          `Event ${i}: action is required`
         );
+      }
+
+      if (hasAction) {
+        if (
+          typeof event.action.domain !== "string" ||
+          !event.action.domain.trim()
+        ) {
+          errors.push(
+            `Event ${i}: action domain is required`
+          );
+        }
+
+        if (
+          typeof event.action.property !== "string" ||
+          !event.action.property.trim()
+        ) {
+          errors.push(
+            `Event ${i}: action property is required`
+          );
+        }
+
+        if (
+          typeof event.action.operation !== "string" ||
+          !event.action.operation.trim()
+        ) {
+          errors.push(
+            `Event ${i}: action operation is required`
+          );
+        }
+
+        if (!Object.prototype.hasOwnProperty.call(event.action, "value")) {
+          errors.push(
+            `Event ${i}: action value is required`
+          );
+        }
       }
 
 

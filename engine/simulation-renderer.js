@@ -4,6 +4,9 @@ const EffectContext =
 const SimulationTimeline =
   require("./simulation-timeline");
 
+const SimulationOperationEngine =
+  require("./simulation-operation-engine");
+
 class SimulationRenderer {
   constructor(options = {}) {
     this.registry =
@@ -11,6 +14,10 @@ class SimulationRenderer {
 
     this.timeline =
       options.timeline || null;
+
+    this.operationEngine =
+      options.operationEngine ||
+      new SimulationOperationEngine();
 
     this.currentEffect = null;
     this.currentEvent = null;
@@ -138,6 +145,67 @@ class SimulationRenderer {
   }
 
   update(event, options = {}) {
+    const hasAction =
+      event &&
+      event.action &&
+      typeof event.action === "object" &&
+      !Array.isArray(event.action);
+
+    if (hasAction) {
+      const state = options.state;
+
+      if (!state) {
+        throw new Error(
+          "Simulation state is required for action events"
+        );
+      }
+
+      const changed =
+        !this.currentEvent ||
+        this.currentEvent.id !== event.id;
+
+      this.currentEffect = null;
+
+      if (!changed) {
+        return {
+          changed: false,
+          effect: null,
+          event,
+          context: null,
+          result: null,
+          state: options.state
+        };
+      }
+
+      this.currentEvent = event;
+
+      const result =
+        this.operationEngine.apply(
+          state,
+          event.action,
+          {
+            event,
+            progress:
+              options.progress !== undefined
+                ? options.progress
+                : 0,
+            deltaTime:
+              options.deltaTime !== undefined
+                ? options.deltaTime
+                : 0
+          }
+        );
+
+      return {
+        changed: true,
+        effect: null,
+        event,
+        context: null,
+        result,
+        state: options.state
+      };
+    }
+
     const effect =
       this.resolveEffect(event);
 
