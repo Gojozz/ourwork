@@ -107,8 +107,13 @@ ${JSON.stringify(previousResults)}
             );
 
           try {
-            require("fs").writeFileSync(
-              "/tmp/what-if-lab-topic-raw.txt",
+            const fs = require("fs");
+            const diagnosticDir = "output/diagnostics";
+            const diagnosticPath = `${diagnosticDir}/topic-raw.txt`;
+
+            fs.mkdirSync(diagnosticDir, { recursive: true });
+            fs.writeFileSync(
+              diagnosticPath,
               String(rawOutput),
               "utf8"
             );

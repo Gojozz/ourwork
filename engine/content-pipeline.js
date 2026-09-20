@@ -62,8 +62,14 @@ class ContentPipeline {
   }
 
   setProvider(provider) {
-    if (typeof provider !== "function") {
-      throw new Error("AI provider must be a function");
+    const valid =
+      typeof provider === "function" ||
+      (provider && typeof provider.generate === "function");
+
+    if (!valid) {
+      throw new Error(
+        "AI provider must be a function or an object with generate()"
+      );
     }
 
     this.provider = provider;

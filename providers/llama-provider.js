@@ -20,6 +20,16 @@ class LlamaProvider {
     this.maxTokens =
       options.maxTokens ||
       1024;
+
+    this.timeoutMs =
+      options.timeoutMs !== undefined
+        ? options.timeoutMs
+        : 300000;
+
+    this.retries =
+      options.retries !== undefined
+        ? options.retries
+        : 1;
   }
 
   async generate(prompt, options = {}) {
@@ -45,13 +55,72 @@ class LlamaProvider {
         options.maxTokens || this.maxTokens
     };
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
+    let response;
+    let lastError;
+
+    for (let attempt = 0; attempt <= this.retries; attempt++) {
+      const startedAt = Date.now();
+      const controller = new AbortController();
+
+      const timer = setTimeout(() => {
+        controller.abort();
+      }, this.timeoutMs);
+
+      try {
+        console.log(
+          `[LlamaProvider] request start attempt=${attempt + 1}/${this.retries + 1} ` +
+          `maxTokens=${body.max_tokens}`
+        );
+
+        response = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal
+        });
+
+        clearTimeout(timer);
+
+        console.log(
+          `[LlamaProvider] response headers status=${response.status} ` +
+          `elapsedMs=${Date.now() - startedAt}`
+        );
+
+        break;
+      } catch (error) {
+        clearTimeout(timer);
+        lastError = error;
+
+        const elapsedMs = Date.now() - startedAt;
+        const isAbort = error && error.name === "AbortError";
+        const isTransportError =
+          isAbort ||
+          (error &&
+            (error.code === "UND_ERR_HEADERS_TIMEOUT" ||
+             error.code === "UND_ERR_CONNECT_TIMEOUT" ||
+             error.code === "ECONNRESET" ||
+             error.code === "ECONNREFUSED" ||
+             error.code === "ETIMEDOUT"));
+
+        console.error(
+          `[LlamaProvider] request failed attempt=${attempt + 1}/${this.retries + 1} ` +
+          `elapsedMs=${elapsedMs} ` +
+          `error=${error && error.message ? error.message : error}`
+        );
+
+        if (!isTransportError || attempt >= this.retries) {
+          throw error;
+        }
+
+        console.log("[LlamaProvider] retrying...");
+      }
+    }
+
+    if (!response) {
+      throw lastError || new Error("llama.cpp request failed");
+    }
 
     if (!response.ok) {
       const text = await response.text();
