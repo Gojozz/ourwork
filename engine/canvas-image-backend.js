@@ -247,12 +247,35 @@ try {
           /data-what-if-lab-error="([^"]*)"/
         );
 
+      const domPreview =
+        dom.length > 5000
+          ? dom.slice(0, 5000)
+          : dom;
+
+      console.error(
+        "[CanvasImageBackend] render marker missing diagnostics:",
+        JSON.stringify({
+          domLength: dom.length,
+          hasBody: /<body/i.test(dom),
+          hasCanvas: /<canvas/i.test(dom),
+          hasRenderOk: dom.includes(
+            'data-what-if-lab-render="ok"'
+          ),
+          hasRenderFailed: dom.includes(
+            'data-what-if-lab-render="failed"'
+          ),
+          hasRenderError: /data-what-if-lab-error=/i.test(dom),
+          domPreview
+        }, null, 2)
+      );
+
       throw new Error(
         [
           `Chromium page did not render successfully for frame ${frame}`,
           errorMatch
             ? `Render error: ${errorMatch[1]}`
             : "Render marker was not found",
+          `DOM length: ${dom.length}`,
           `HTML: ${absoluteHtmlPath}`,
           `URL: ${htmlUrl}`
         ].join("\n")
