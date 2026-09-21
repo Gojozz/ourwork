@@ -180,7 +180,8 @@ class ContentPipeline {
             stage: "scenario",
             topic,
             verifiedClaims,
-            attempt
+            attempt,
+            maxTokens: 1200
           }
         );
 
