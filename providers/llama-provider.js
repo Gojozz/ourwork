@@ -130,16 +130,53 @@ class LlamaProvider {
       );
     }
 
-    const data = await response.json();
+    const responseText = await response.text();
 
-    const content =
-      data &&
-      data.choices &&
-      data.choices[0] &&
-      data.choices[0].message &&
-      data.choices[0].message.content;
+    let data;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch (error) {
+      throw new Error(
+        `Invalid llama.cpp JSON response: ${responseText.slice(0, 2000)}`
+      );
+    }
+
+    const choice = data &&
+      Array.isArray(data.choices) &&
+      data.choices.length > 0
+      ? data.choices[0]
+      : null;
+
+    const message = choice && choice.message
+      ? choice.message
+      : null;
+
+    const content = message && message.content;
 
     if (typeof content !== "string" || !content.trim()) {
+      console.error(
+        "[LlamaProvider] invalid response diagnostics:",
+        JSON.stringify({
+          topLevelKeys: data && typeof data === "object"
+            ? Object.keys(data)
+            : [],
+          choicesCount: Array.isArray(data && data.choices)
+            ? data.choices.length
+            : null,
+          choiceKeys: choice && typeof choice === "object"
+            ? Object.keys(choice)
+            : [],
+          messageKeys: message && typeof message === "object"
+            ? Object.keys(message)
+            : [],
+          finishReason: choice && choice.finish_reason !== undefined
+            ? choice.finish_reason
+            : null,
+          responsePreview: responseText.slice(0, 3000)
+        }, null, 2)
+      );
+
       throw new Error(
         "Invalid llama.cpp response: missing message content"
       );
