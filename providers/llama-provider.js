@@ -55,6 +55,14 @@ class LlamaProvider {
         options.maxTokens || this.maxTokens
     };
 
+    if (options.reasoningEffort !== undefined) {
+      body.reasoning_effort = options.reasoningEffort;
+    }
+
+    if (options.chatTemplateKwargs !== undefined) {
+      body.chat_template_kwargs = options.chatTemplateKwargs;
+    }
+
     let response;
     let lastError;
 

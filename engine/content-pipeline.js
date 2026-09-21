@@ -181,7 +181,8 @@ class ContentPipeline {
             topic,
             verifiedClaims,
             attempt,
-            maxTokens: 1200
+            maxTokens: 1200,
+            reasoningEffort: "none"
           }
         );
 
