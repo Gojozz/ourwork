@@ -252,21 +252,57 @@ try {
           ? dom.slice(0, 5000)
           : dom;
 
+      const diagnostics = {
+        frame,
+        chromium: this.chromium,
+        tempDir: this.tempDir,
+        htmlPath: absoluteHtmlPath,
+        outputPath: absoluteOutputPath,
+        domLength: dom.length,
+        hasBody: /<body/i.test(dom),
+        hasCanvas: /<canvas/i.test(dom),
+        hasRenderOk: dom.includes(
+          'data-what-if-lab-render="ok"'
+        ),
+        hasRenderFailed: dom.includes(
+          'data-what-if-lab-render="failed"'
+        ),
+        hasRenderError: /data-what-if-lab-error=/i.test(dom),
+        renderError:
+          errorMatch
+            ? errorMatch[1]
+            : null,
+        domPreview
+      };
+
+      try {
+        fs.writeFileSync(
+          path.join(this.tempDir, "render-diagnostics.json"),
+          JSON.stringify(diagnostics, null, 2),
+          "utf8"
+        );
+
+        fs.writeFileSync(
+          path.join(this.tempDir, "frame.html"),
+          fs.readFileSync(absoluteHtmlPath, "utf8"),
+          "utf8"
+        );
+
+        fs.writeFileSync(
+          path.join(this.tempDir, "dom-output.html"),
+          dom,
+          "utf8"
+        );
+      } catch (diagnosticError) {
+        console.error(
+          "[CanvasImageBackend] failed to write diagnostics:",
+          diagnosticError
+        );
+      }
+
       console.error(
         "[CanvasImageBackend] render marker missing diagnostics:",
-        JSON.stringify({
-          domLength: dom.length,
-          hasBody: /<body/i.test(dom),
-          hasCanvas: /<canvas/i.test(dom),
-          hasRenderOk: dom.includes(
-            'data-what-if-lab-render="ok"'
-          ),
-          hasRenderFailed: dom.includes(
-            'data-what-if-lab-render="failed"'
-          ),
-          hasRenderError: /data-what-if-lab-error=/i.test(dom),
-          domPreview
-        }, null, 2)
+        JSON.stringify(diagnostics, null, 2)
       );
 
       throw new Error(
