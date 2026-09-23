@@ -126,15 +126,20 @@ class SimulationState {
     return {
       time: this.time,
 
-      entities: {
-        ...this.entities
-      },
+      entities:
+        typeof structuredClone === "function"
+          ? structuredClone(this.entities)
+          : JSON.parse(JSON.stringify(this.entities)),
 
-      variables: {
-        ...this.variables
-      },
+      variables:
+        typeof structuredClone === "function"
+          ? structuredClone(this.variables)
+          : JSON.parse(JSON.stringify(this.variables)),
 
-      events: [...this.events]
+      events:
+        typeof structuredClone === "function"
+          ? structuredClone(this.events)
+          : JSON.parse(JSON.stringify(this.events))
     };
   }
 

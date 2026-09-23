@@ -69,7 +69,14 @@ class SimulationRenderer {
       this.currentEffect = null;
       this.currentEvent = null;
 
-      return null;
+      return {
+        changed: false,
+        effect: null,
+        event: null,
+        context: null,
+        result: null,
+        state: options.state || null
+      };
     }
 
     const result =
@@ -218,7 +225,8 @@ class SimulationRenderer {
         effect: null,
         event: null,
         context: null,
-        result: null
+        result: null,
+        state: options.state || null
       };
     }
 
@@ -254,7 +262,8 @@ class SimulationRenderer {
       effect,
       event,
       context,
-      result
+      result,
+      state: options.state || null
     };
   }
 

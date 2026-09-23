@@ -105,15 +105,141 @@ class SimulationOperationEngine {
       throw new Error("Action operation is required");
     }
 
+    const cleanDomain = domain.trim();
+    const cleanProperty = property.trim();
+    const cleanOperation = operation.trim();
+
+    // Entity actions use:
+    // domain: "entity.<entityId>"
+    // property: "appearance.rotation"
+    //
+    // Example:
+    // {
+    //   domain: "entity.earth",
+    //   property: "appearance.rotation",
+    //   operation: "set",
+    //   value: 0
+    // }
+    if (
+      cleanDomain.startsWith("entity.")
+    ) {
+      const entityId =
+        cleanDomain.slice("entity.".length).trim();
+
+      if (!entityId) {
+        throw new Error(
+          "Entity action requires an entity id"
+        );
+      }
+
+      const entity =
+        state.getEntity(entityId);
+
+      if (
+        !entity ||
+        typeof entity !== "object" ||
+        Array.isArray(entity)
+      ) {
+        throw new Error(
+          `Entity not found: ${entityId}`
+        );
+      }
+
+      const parts =
+        cleanProperty
+          .split(".")
+          .map(part => part.trim())
+          .filter(Boolean);
+
+      if (!parts.length) {
+        throw new Error(
+          "Entity property is required"
+        );
+      }
+
+      let target = entity;
+
+      for (
+        let i = 0;
+        i < parts.length - 1;
+        i++
+      ) {
+        const part = parts[i];
+
+        if (
+          !target[part] ||
+          typeof target[part] !== "object" ||
+          Array.isArray(target[part])
+        ) {
+          target[part] = {};
+        }
+
+        target = target[part];
+      }
+
+      const leaf =
+        parts[parts.length - 1];
+
+      const currentValue =
+        Object.prototype.hasOwnProperty.call(
+          target,
+          leaf
+        )
+          ? target[leaf]
+          : null;
+
+      const nextValue =
+        this.execute(
+          cleanOperation,
+          currentValue,
+          value,
+          {
+            ...context,
+            state,
+            action,
+            entityId,
+            entity,
+            property: cleanProperty,
+            entityProperty: cleanProperty
+          }
+        );
+
+      if (cleanOperation === "remove") {
+        delete target[leaf];
+      } else {
+        target[leaf] = nextValue;
+      }
+
+      state.setEntity(
+        entityId,
+        entity
+      );
+
+      return {
+        target: "entity",
+        entityId,
+        domain: cleanDomain,
+        property: cleanProperty,
+        operation: cleanOperation,
+        previousValue: currentValue,
+        value:
+          cleanOperation === "remove"
+            ? null
+            : nextValue
+      };
+    }
+
+    // Existing variable behavior remains
+    // backward compatible.
     const variableName =
-      `${domain.trim()}.${property.trim()}`;
+      `${cleanDomain}.${cleanProperty}`;
 
     const currentValue =
       state.getVariable(variableName);
 
     const nextValue =
       this.execute(
-        operation.trim(),
+        cleanOperation,
         currentValue,
         value,
         {
@@ -124,17 +250,25 @@ class SimulationOperationEngine {
         }
       );
 
-    state.setVariable(
-      variableName,
-      nextValue
-    );
+    if (cleanOperation === "remove") {
+      state.removeVariable(variableName);
+    } else {
+      state.setVariable(
+        variableName,
+        nextValue
+      );
+    }
 
     return {
-      domain: domain.trim(),
-      property: property.trim(),
-      operation: operation.trim(),
+      target: "variable",
+      domain: cleanDomain,
+      property: cleanProperty,
+      operation: cleanOperation,
       previousValue: currentValue,
-      value: nextValue
+      value:
+        cleanOperation === "remove"
+          ? null
+          : nextValue
     };
   }
 

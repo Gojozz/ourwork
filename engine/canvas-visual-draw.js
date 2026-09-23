@@ -17,7 +17,7 @@ function canvasVisualDraw(ctx, canvas, options = {}) {
   const state =
     options.state ||
     options.data ||
-    {};
+    options;
 
   const entities =
     state.entities || {};

@@ -105,6 +105,12 @@ OUTPUT RULES:
 
 - entities and variables must be plain JSON objects.
 - Entities describe what exists in the simulation.
+- initialState.entities MUST contain at least 1 entity.
+- Create 1–3 visually important entities that are visible from the first frame.
+- Every entity MUST define a numeric x/y position directly or through position.x/position.y.
+- Every entity MUST define at least one renderable visual property such as radius, width, height, shape, or color.
+- Prefer an appearance object for visual properties.
+- Do not return an empty entities object.
 - Entity appearance must use declarative properties only.
 - Do not include JavaScript, Three.js, functions, or executable code.
 

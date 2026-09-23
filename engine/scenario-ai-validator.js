@@ -82,6 +82,84 @@ class ScenarioAIValidator {
         errors.push(
           "AI scenario initialState.entities is required"
         );
+      } else {
+        const entityEntries =
+          Object.entries(initialState.entities);
+
+        if (entityEntries.length < 1) {
+          errors.push(
+            "AI scenario initialState.entities must contain at least one entity"
+          );
+        }
+
+        for (const [id, entity] of entityEntries) {
+          if (
+            typeof id !== "string" ||
+            !id.trim()
+          ) {
+            errors.push(
+              "AI scenario entity id must be a non-empty string"
+            );
+            continue;
+          }
+
+          if (
+            !entity ||
+            typeof entity !== "object" ||
+            Array.isArray(entity)
+          ) {
+            errors.push(
+              `AI scenario entity must be an object: ${id}`
+            );
+            continue;
+          }
+
+          const position =
+            entity.position &&
+            typeof entity.position === "object" &&
+            !Array.isArray(entity.position)
+              ? entity.position
+              : {};
+
+          const appearance =
+            entity.appearance &&
+            typeof entity.appearance === "object" &&
+            !Array.isArray(entity.appearance)
+              ? entity.appearance
+              : {};
+
+          const hasX =
+            Number.isFinite(entity.x) ||
+            Number.isFinite(position.x);
+
+          const hasY =
+            Number.isFinite(entity.y) ||
+            Number.isFinite(position.y);
+
+          const hasVisualProperty =
+            Number.isFinite(entity.radius) ||
+            Number.isFinite(appearance.radius) ||
+            Number.isFinite(entity.width) ||
+            Number.isFinite(appearance.width) ||
+            Number.isFinite(entity.height) ||
+            Number.isFinite(appearance.height) ||
+            typeof entity.shape === "string" ||
+            typeof appearance.shape === "string" ||
+            typeof entity.color === "string" ||
+            typeof appearance.color === "string";
+
+          if (!hasX || !hasY) {
+            errors.push(
+              `AI scenario entity must define numeric x/y or position.x/position.y: ${id}`
+            );
+          }
+
+          if (!hasVisualProperty) {
+            errors.push(
+              `AI scenario entity must define at least one renderable visual property: ${id}`
+            );
+          }
+        }
       }
 
       if (

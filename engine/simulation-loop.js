@@ -151,10 +151,20 @@ class SimulationLoop {
       const result =
         this.update(time);
 
+      const frameResult = {
+        ...result,
+        state:
+          result && result.state && typeof result.state.snapshot === "function"
+            ? result.state.snapshot()
+            : result
+              ? result.state
+              : null
+      };
+
       frames.push({
         frame,
         time,
-        result
+        result: frameResult
       });
     }
 

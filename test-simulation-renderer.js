@@ -4,6 +4,12 @@ const EffectRegistry =
 const SimulationRenderer =
   require("./engine/simulation-renderer");
 
+const SimulationState =
+  require("./engine/simulation-state");
+
+const SimulationTimeline =
+  require("./engine/simulation-timeline");
+
 const registry =
   new EffectRegistry();
 
@@ -95,6 +101,90 @@ if (!rejected) {
     "UNREGISTERED EFFECT WAS NOT REJECTED"
   );
 }
+
+// ------------------------------------------------------------
+// ENTITY ACTION -> STATE REGRESSION
+// ------------------------------------------------------------
+
+const actionRenderer =
+  new SimulationRenderer({
+    registry
+  });
+
+const actionTimeline =
+  new SimulationTimeline();
+
+actionTimeline.setEvents([
+  {
+    id: "entity-action",
+    start: 0,
+    end: 10,
+    action: {
+      domain: "entity.earth",
+      property: "appearance.rotation",
+      operation: "set",
+      value: 1.5
+    }
+  }
+]);
+
+actionRenderer.timeline =
+  actionTimeline;
+
+const actionState =
+  new SimulationState({
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff",
+          rotation: 0
+        }
+      }
+    },
+    variables: {}
+  });
+
+const actionResult =
+  actionRenderer.updateAtTime(
+    5,
+    {
+      state: actionState
+    }
+  );
+
+if (
+  !actionResult ||
+  actionResult.changed !== true ||
+  actionState.getEntity("earth").appearance.rotation !== 1.5
+) {
+  throw new Error(
+    "ENTITY ACTION PIPELINE FAILED"
+  );
+}
+
+const secondActionResult =
+  actionRenderer.updateAtTime(
+    6,
+    {
+      state: actionState
+    }
+  );
+
+if (secondActionResult.changed !== false) {
+  throw new Error(
+    "ENTITY ACTION REAPPLIED"
+  );
+}
+
+console.log(
+  "ENTITY ACTION -> STATE: OK"
+);
 
 renderer.reset();
 

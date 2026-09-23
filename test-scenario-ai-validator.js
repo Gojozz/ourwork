@@ -20,7 +20,19 @@ const validScenario = {
   version: 1,
   duration: 30,
   initialState: {
-    entities: {},
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff"
+        }
+      }
+    },
     variables: {
       "earth.rotation": 1
     }
@@ -66,7 +78,19 @@ const invalidScenario = {
   version: 1,
   duration: 30,
   initialState: {
-    entities: {},
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff"
+        }
+      }
+    },
     variables: {
       "earth.rotation": 1
     }
@@ -126,7 +150,19 @@ const unsupportedOperationScenario = {
   version: 1,
   duration: 10,
   initialState: {
-    entities: {},
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff"
+        }
+      }
+    },
     variables: {
       "earth.rotation": 1
     }
@@ -171,8 +207,61 @@ const hasUnsupportedOperation =
       )
   );
 
+const emptyEntitiesScenario = {
+  id: "empty-entities",
+  title: "Empty Entities",
+  version: 1,
+  duration: 10,
+  initialState: {
+    entities: {},
+    variables: {
+      "earth.rotation": 1
+    }
+  },
+  events: [
+    {
+      id: "normal",
+      start: 0,
+      end: 10,
+      action: {
+        domain: "earth",
+        property: "rotation",
+        operation: "set",
+        value: 0
+      }
+    }
+  ]
+};
+
+console.log("\n===== EMPTY ENTITIES REGRESSION =====");
+
+const emptyEntitiesResult =
+  validator.validate(
+    emptyEntitiesScenario
+  );
+
+console.log(
+  "VALID:",
+  emptyEntitiesResult.valid
+);
+
+for (const error of emptyEntitiesResult.errors) {
+  console.log("ERROR:", error);
+}
+
+const rejectsEmptyEntities =
+  emptyEntitiesResult.valid === false &&
+  emptyEntitiesResult.errors.some(
+    error =>
+      typeof error === "string" &&
+      error.includes(
+        "initialState.entities must contain at least one entity"
+      )
+  );
+
 if (
   validResult.valid === true &&
+  rejectsEmptyEntities === true &&
   validResult.errors.length === 0 &&
   invalidResult.valid === false &&
   hasUnregisteredEffect &&
