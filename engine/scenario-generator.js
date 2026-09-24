@@ -89,7 +89,12 @@ VISUAL ACTION CONTRACT:
 - At least ONE event MUST change a visible entity property over time.
 - To change something visible, the action "domain" MUST be exactly "entity.<entityId>".
 - Example: "entity.earth" changes the Earth entity.
-- The <entityId> MUST exactly match an ID in initialState.entities.
+- Entity IDs are arbitrary scenario-specific strings chosen by the AI.
+- Entity IDs MUST NOT start with "entity.".
+- Example valid entity IDs: "earth", "person", "car", "tree", "ocean", "phone".
+- The action domain adds the "entity." prefix separately.
+- Example: entity ID "car" is stored as "car", while an action targeting it uses domain "entity.car".
+- The <entityId> in "entity.<entityId>" MUST exactly match an ID in initialState.entities.
 - For visual changes, "property" MUST be a property path on that entity.
 - Valid examples include:
   "appearance.radius"
@@ -155,7 +160,11 @@ OUTPUT RULES:
 - Event start must be >= 0.
 - Event end must be greater than start.
 - Events must be ordered chronologically.
-- Events must not overlap.
+- Events MUST be strictly sequential/non-overlapping.
+- For every event after the first: event.start MUST be greater than or equal to the previous event.end.
+- NEVER start an event before the previous event has ended.
+- INVALID example: event A 0–60 followed by event B 10–30.
+- VALID example: event A 0–10, event B 10–20, event C 20–30.
 - Do not include markdown.
 - Do not include explanations outside JSON.
 `.trim();
