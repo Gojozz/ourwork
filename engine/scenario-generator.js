@@ -85,6 +85,26 @@ If a requested change cannot be expressed using one of the seven
 supported operations above, choose the closest valid declarative
 operation or omit that action.
 
+VISUAL ACTION CONTRACT:
+- At least ONE event MUST change a visible entity property over time.
+- To change something visible, the action "domain" MUST be exactly "entity.<entityId>".
+- Example: "entity.earth" changes the Earth entity.
+- The <entityId> MUST exactly match an ID in initialState.entities.
+- For visual changes, "property" MUST be a property path on that entity.
+- Valid examples include:
+  "appearance.radius"
+  "appearance.opacity"
+  "appearance.color"
+  "appearance.width"
+  "appearance.height"
+  "position.x"
+  "position.y"
+  "rotation"
+- Do NOT put visual changes only in variables.
+- Do NOT use a bare scientific domain such as "earth", "atmosphere", or "gravity" for a visual entity change.
+- Every visual action MUST target an existing entity through "entity.<entityId>".
+- Prefer simple "set", "multiply", "add", or "subtract" operations for visual changes.
+
 The action describes the intended state change.
 The simulation engine decides how to implement it.
 

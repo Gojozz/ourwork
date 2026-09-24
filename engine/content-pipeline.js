@@ -246,12 +246,30 @@ REPAIR RULES:
   "scale", "transform", "increment", "decrement",
   or any other operation name.
 - Ensure initialState.entities and initialState.variables exist.
+- initialState.entities MUST be a plain JSON object with at least 1 entity.
+- Every entity MUST have numeric x/y directly or through position.x/position.y.
+- Every entity MUST have at least one renderable visual property such as radius, width, height, shape, or color.
 - Ensure all events are chronological and non-overlapping.
 - Ensure every action contains:
   domain
   property
   operation
   value
+- At least ONE event MUST change a visible entity property.
+- For every visual change, action.domain MUST be exactly "entity.<entityId>".
+- The <entityId> MUST exactly match an entity ID in initialState.entities.
+- Valid visual property examples:
+  appearance.radius
+  appearance.opacity
+  appearance.color
+  appearance.width
+  appearance.height
+  position.x
+  position.y
+  rotation
+- Do NOT use a bare domain such as "earth", "gravity", or "atmosphere" for visual entity changes.
+- Do NOT put visual changes only in variables.
+- The operation MUST be one of: set, multiply, add, subtract, remove, enable, disable.
 
 Return the COMPLETE corrected scenario JSON.
 `.trim();
