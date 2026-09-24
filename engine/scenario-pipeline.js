@@ -40,6 +40,14 @@ class ScenarioPipeline {
         rawOutput
       );
 
+    if (process.env.WHAT_IF_LAB_SCENARIO_DEBUG === "1") {
+      const fs = require("fs");
+      fs.writeFileSync(
+        "/tmp/what-if-lab-generated-scenario-debug.txt",
+        JSON.stringify(generated.scenario, null, 2)
+      );
+    }
+
     const validation =
       this.validator.validate(
         generated.scenario

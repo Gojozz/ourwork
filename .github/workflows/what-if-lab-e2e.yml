@@ -114,6 +114,7 @@ jobs:
         env:
           LLAMA_BASE_URL: http://127.0.0.1:8080
           LLAMA_MODEL: Qwen/Qwen3-4B-GGUF:Q4_K_M
+          WHAT_IF_LAB_SCENARIO_DEBUG: "1"
         run: |
           cat > /tmp/what-if-lab-e2e.js <<'JS'
           const fs = require("fs");
