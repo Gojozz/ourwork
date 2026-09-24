@@ -192,7 +192,11 @@ jobs:
                   }
                 },
 
-                ttsProvider: tts
+                ttsProvider: tts,
+                diagnostics: {
+                  scenarioRawPath: "/tmp/what-if-lab-scenario-raw.txt",
+                  scenarioPromptPath: "/tmp/what-if-lab-scenario-prompt.txt"
+                }
               });
 
             const result =
@@ -374,5 +378,7 @@ jobs:
           path: |
             /tmp/llama-server.log
             /tmp/what-if-lab-topic-raw.txt
+            /tmp/what-if-lab-scenario-raw.txt
+            /tmp/what-if-lab-scenario-prompt.txt
             output/github-e2e/
           retention-days: 3

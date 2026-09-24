@@ -189,9 +189,12 @@ class ContentPipeline {
       if (this.diagnostics.scenarioRawPath) {
         const fs = require("fs");
 
-        fs.writeFileSync(
+        fs.appendFileSync(
           this.diagnostics.scenarioRawPath,
-          String(rawOutput)
+          `
+===== SCENARIO ATTEMPT ${attempt} =====
+${String(rawOutput)}
+`
         );
       }
 
