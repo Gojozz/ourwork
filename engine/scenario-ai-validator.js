@@ -228,6 +228,20 @@ class ScenarioAIValidator {
           errors.push(
             `Event ${event.id || i}: action domain is required`
           );
+        } else if (event.action.domain.trim().startsWith("entity.")) {
+          const entityId = event.action.domain.trim().slice("entity.".length);
+
+          if (
+            !entityId ||
+            !Object.prototype.hasOwnProperty.call(
+              initialState.entities,
+              entityId
+            )
+          ) {
+            errors.push(
+              `Event ${event.id || i}: Entity not found: ${entityId || "<empty>"}`
+            );
+          }
         }
 
         if (

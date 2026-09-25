@@ -259,6 +259,70 @@ const rejectsEmptyEntities =
       )
   );
 
+const missingEntityScenario = {
+  id: "missing-entity-target",
+  title: "Missing Entity Target",
+  version: 1,
+  duration: 10,
+  initialState: {
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff"
+        }
+      }
+    },
+    variables: {}
+  },
+  events: [
+    {
+      id: "bad-entity-target",
+      start: 0,
+      end: 10,
+      action: {
+        domain: "entity.gravity",
+        property: "appearance.opacity",
+        operation: "set",
+        value: 0
+      }
+    }
+  ]
+};
+
+console.log("\n===== MISSING ENTITY TARGET REGRESSION =====");
+
+const missingEntityResult = validator.validate(missingEntityScenario);
+
+console.log("VALID:", missingEntityResult.valid);
+
+for (const error of missingEntityResult.errors) {
+  console.log("ERROR:", error);
+}
+
+const rejectsMissingEntityTarget =
+  missingEntityResult.valid === false &&
+  missingEntityResult.errors.some(
+    error =>
+      typeof error === "string" &&
+      error.includes("Entity not found: gravity")
+  );
+
+if (!rejectsEmptyEntities) {
+  throw new Error("EMPTY ENTITIES REGRESSION FAILED");
+}
+
+if (!rejectsMissingEntityTarget) {
+  throw new Error("MISSING ENTITY TARGET REGRESSION FAILED");
+}
+
+console.log("MISSING ENTITY TARGET REGRESSION: OK");
+
 if (
   validResult.valid === true &&
   rejectsEmptyEntities === true &&
