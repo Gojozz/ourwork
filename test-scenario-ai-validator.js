@@ -313,6 +313,163 @@ const rejectsMissingEntityTarget =
       error.includes("Entity not found: gravity")
   );
 
+
+const durationBaseScenario = {
+  id: "duration-base",
+  title: "Duration Base",
+  version: 1,
+  duration: 30,
+  initialState: {
+    entities: {
+      earth: {
+        position: {
+          x: 540,
+          y: 960
+        },
+        appearance: {
+          shape: "circle",
+          radius: 250,
+          color: "#4da6ff"
+        }
+      }
+    },
+    variables: {}
+  },
+  events: [
+    {
+      id: "event",
+      start: 0,
+      end: 30,
+      effect: "earth.normal"
+    }
+  ]
+};
+
+console.log("\n===== DURATION CONTRACT REGRESSION =====");
+
+const durationTooShortScenario = {
+  ...durationBaseScenario,
+  id: "duration-too-short",
+  duration: 29,
+  events: [
+    {
+      id: "event",
+      start: 0,
+      end: 29,
+      effect: "earth.normal"
+    }
+  ]
+};
+
+const durationTooLongScenario = {
+  ...durationBaseScenario,
+  id: "duration-too-long",
+  duration: 61,
+  events: [
+    {
+      id: "event",
+      start: 0,
+      end: 61,
+      effect: "earth.normal"
+    }
+  ]
+};
+
+const durationMinScenario = {
+  ...durationBaseScenario,
+  id: "duration-min",
+  duration: 30
+};
+
+const durationMaxScenario = {
+  ...durationBaseScenario,
+  id: "duration-max",
+  duration: 60,
+  events: [
+    {
+      id: "event",
+      start: 0,
+      end: 60,
+      effect: "earth.normal"
+    }
+  ]
+};
+
+const durationTooShortResult =
+  validator.validate(durationTooShortScenario);
+
+const durationTooLongResult =
+  validator.validate(durationTooLongScenario);
+
+const durationMinResult =
+  validator.validate(durationMinScenario);
+
+const durationMaxResult =
+  validator.validate(durationMaxScenario);
+
+console.log(
+  "TOO SHORT VALID:",
+  durationTooShortResult.valid
+);
+
+for (const error of durationTooShortResult.errors) {
+  console.log("ERROR:", error);
+}
+
+console.log(
+  "TOO LONG VALID:",
+  durationTooLongResult.valid
+);
+
+for (const error of durationTooLongResult.errors) {
+  console.log("ERROR:", error);
+}
+
+console.log(
+  "30 SEC VALID:",
+  durationMinResult.valid
+);
+
+console.log(
+  "60 SEC VALID:",
+  durationMaxResult.valid
+);
+
+const rejectsTooShortDuration =
+  durationTooShortResult.valid === false &&
+  durationTooShortResult.errors.some(
+    error =>
+      typeof error === "string" &&
+      error.includes("duration")
+  );
+
+const rejectsTooLongDuration =
+  durationTooLongResult.valid === false &&
+  durationTooLongResult.errors.some(
+    error =>
+      typeof error === "string" &&
+      error.includes("duration")
+  );
+
+const acceptsMinimumDuration =
+  durationMinResult.valid === true;
+
+const acceptsMaximumDuration =
+  durationMaxResult.valid === true;
+
+if (
+  !rejectsTooShortDuration ||
+  !rejectsTooLongDuration ||
+  !acceptsMinimumDuration ||
+  !acceptsMaximumDuration
+) {
+  throw new Error(
+    "DURATION CONTRACT REGRESSION FAILED"
+  );
+}
+
+console.log("DURATION CONTRACT REGRESSION: OK");
+
 if (!rejectsEmptyEntities) {
   throw new Error("EMPTY ENTITIES REGRESSION FAILED");
 }

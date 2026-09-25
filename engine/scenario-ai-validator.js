@@ -62,6 +62,25 @@ class ScenarioAIValidator {
       };
     }
 
+    // AI scenario duration contract:
+    // Shorts scenarios must run for 30-60 seconds.
+    if (
+      typeof scenario.duration !== "number" ||
+      !Number.isFinite(scenario.duration)
+    ) {
+      errors.push(
+        "AI scenario duration must be a finite number"
+      );
+    } else if (scenario.duration < 30) {
+      errors.push(
+        "AI scenario duration must be at least 30 seconds"
+      );
+    } else if (scenario.duration > 60) {
+      errors.push(
+        "AI scenario duration must not exceed 60 seconds"
+      );
+    }
+
     const initialState =
       scenario.initialState;
 
