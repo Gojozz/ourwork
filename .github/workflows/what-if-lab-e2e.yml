@@ -163,7 +163,7 @@ jobs:
                 model:
                   process.env.LLAMA_MODEL,
                 temperature: 0.2,
-                maxTokens: 2400
+                maxTokens: 1200
               });
 
             const tts =
