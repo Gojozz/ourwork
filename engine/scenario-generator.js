@@ -156,7 +156,15 @@ OUTPUT RULES:
 - Never use implementation-specific commands.
 
 - Do not include an "effect" field unless explicitly required for legacy compatibility.
-- duration must be greater than zero.
+DURATION CONTRACT:
+- "duration" MUST be a finite number between 30 and 60 inclusive.
+- Prefer duration values of 30, 45, or 60 seconds.
+- Do NOT output duration below 30 or above 60.
+- Every event "end" MUST be less than or equal to duration.
+- If the story needs more time, compress the event timeline so all events fit within 30–60 seconds.
+- Never increase duration above 60 to accommodate events.
+- Never output an event whose end time exceeds duration.
+
 - Event start must be >= 0.
 - Event end must be greater than start.
 - Events must be ordered chronologically.

@@ -48,6 +48,18 @@ console.log(
   prompt.includes("VERIFIED SCIENTIFIC CLAIMS")
 );
 console.log(
+  "HAS DURATION CONTRACT:",
+  prompt.includes('"duration" MUST be a finite number between 30 and 60 inclusive.')
+);
+console.log(
+  "HAS EVENT END CONTRACT:",
+  prompt.includes('Every event "end" MUST be less than or equal to duration.')
+);
+console.log(
+  "HAS NO OVER-60 DURATION RULE:",
+  prompt.includes("Never increase duration above 60 to accommodate events.")
+);
+console.log(
   "HAS EFFECTS:",
   prompt.includes("earth.stop")
 );

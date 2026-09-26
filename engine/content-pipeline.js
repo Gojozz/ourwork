@@ -250,6 +250,11 @@ REPAIR RULES:
 - Every entity MUST have numeric x/y directly or through position.x/position.y.
 - Every entity MUST have at least one renderable visual property such as radius, width, height, shape, or color.
 - Ensure all events are chronological and non-overlapping.
+- "duration" MUST be a finite number between 30 and 60 seconds inclusive.
+- Prefer duration values of 30, 45, or 60 seconds.
+- NEVER repair an overlong timeline by setting duration above 60.
+- Every event "end" MUST be less than or equal to duration.
+- If events extend beyond the allowed duration, compress or adjust their timeline so every event fits within 30–60 seconds.
 - Ensure every action contains:
   domain
   property
